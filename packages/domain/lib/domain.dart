@@ -23,6 +23,7 @@ export 'src/review/rating.dart';
 export 'src/review/review.dart';
 export 'src/review/review_rules.dart';
 export 'src/review/review_text.dart';
+export 'src/slot/availability.dart';
 export 'src/slot/calendar.dart';
 export 'src/slot/slot.dart';
 export 'src/user.dart';
