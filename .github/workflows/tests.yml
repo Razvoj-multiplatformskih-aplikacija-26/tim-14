@@ -23,3 +23,7 @@ jobs:
       - name: Test domain
         working-directory: packages/domain
         run: dart test
+
+      - name: Test use_cases
+        working-directory: packages/use_cases
+        run: dart test
