@@ -17,6 +17,9 @@ jobs:
             command: dart test
           - package: ui
             command: flutter test
+          - package: use_cases
+            command: dart test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +32,10 @@ jobs:
       - name: Resolve workspace
         run: flutter pub get
 
-      - name: Test ${{ matrix.package }}
-        working-directory: packages/${{ matrix.package }}
-        run: ${{ matrix.command }}
+      - name: Test domain
+        working-directory: packages/domain
+        run: dart test
+
+      - name: Test use_cases
+        working-directory: packages/use_cases
+        run: dart test
