@@ -3,4 +3,5 @@ analyzer:
     - build/**
     - web/**
     - macos/**
+    - windows/**
 include: ../../analysis_options.yaml
