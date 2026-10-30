@@ -23,3 +23,7 @@ jobs:
       - name: Test domain
         working-directory: packages/domain
         run: dart test
+
+      - name: Test ui
+        working-directory: packages/ui
+        run: flutter test
