@@ -25,3 +25,5 @@ key.properties
 # Logs and test output
 *.log
 coverage/
+
+.claude
