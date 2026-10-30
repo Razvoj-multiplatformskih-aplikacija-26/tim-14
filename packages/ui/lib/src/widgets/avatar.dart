@@ -44,7 +44,7 @@ class Avatar extends StatelessWidget {
 }
 
 /// First letter of the first and the last word, so "Ana Marija Petrović" is "AP".
-/// `characters` takes a whole letter even when it's written as several code units, e.g. a decomposed "Đ".
+/// `characters` takes a whole letter even when it's written as several code units, e.g. "Č" stored as C + caron.
 String _initials(String name) {
   final words = name.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
   if (words.isEmpty) return '';

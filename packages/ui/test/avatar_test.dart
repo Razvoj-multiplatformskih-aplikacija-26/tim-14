@@ -28,6 +28,8 @@ void main() {
     'Ana Marija Petrović': 'AP',
     '  marko  ': 'M',
     'milica   jovanović': 'MJ',
+    // Č written as C + combining caron; taking [0] would drop the caron and give "CP".
+    'Čedomir Petrović': 'ČP',
     '': '',
   };
 
