@@ -6,8 +6,17 @@ on:
     branches: [main]
 
 jobs:
-  domain:
+  test:
+    name: Test ${{ matrix.package }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: domain
+            command: dart test
+          - package: ui
+            command: flutter test
     steps:
       - uses: actions/checkout@v4
 
@@ -20,10 +29,6 @@ jobs:
       - name: Resolve workspace
         run: flutter pub get
 
-      - name: Test domain
-        working-directory: packages/domain
-        run: dart test
-
-      - name: Test ui
-        working-directory: packages/ui
-        run: flutter test
+      - name: Test ${{ matrix.package }}
+        working-directory: packages/${{ matrix.package }}
+        run: ${{ matrix.command }}
