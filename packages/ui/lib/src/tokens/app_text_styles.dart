@@ -2,7 +2,6 @@ import 'package:flutter/painting.dart';
 
 /// Text styles from Figma Foundations › Typography › Ramp, in frame order.
 /// `height` is written as line height / font size, so `44 / 36` is Figma's "36/44".
-/// Every style has letter spacing 0, which is Flutter's default.
 /// Styles carry no color; Figma text styles don't either.
 abstract final class AppTextStyles {
   static const String _family = 'Figtree';
@@ -11,6 +10,10 @@ abstract final class AppTextStyles {
   // Figma centers the line height around the text; Flutter's default leading would shift it vertically.
   static const TextLeadingDistribution _leading = TextLeadingDistribution.even;
 
+  // Every Figma style has letter spacing 0. It's set explicitly because Theme.of merges these styles over
+  // Material's text geometry, which would otherwise fill in its own tracking (0.25 on bodyMedium, 0.5 on bodyLarge).
+  static const double _tracking = 0;
+
   // Display/4xl
   static const TextStyle display4xl = TextStyle(
     fontFamily: _family,
@@ -18,6 +21,7 @@ abstract final class AppTextStyles {
     fontSize: 36,
     fontWeight: FontWeight.w700,
     height: 44 / 36,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -28,6 +32,7 @@ abstract final class AppTextStyles {
     fontSize: 30,
     fontWeight: FontWeight.w700,
     height: 38 / 30,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -38,6 +43,7 @@ abstract final class AppTextStyles {
     fontSize: 24,
     fontWeight: FontWeight.w600,
     height: 32 / 24,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -48,6 +54,7 @@ abstract final class AppTextStyles {
     fontSize: 20,
     fontWeight: FontWeight.w600,
     height: 28 / 20,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -58,6 +65,7 @@ abstract final class AppTextStyles {
     fontSize: 18,
     fontWeight: FontWeight.w600,
     height: 28 / 18,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -68,6 +76,7 @@ abstract final class AppTextStyles {
     fontSize: 18,
     fontWeight: FontWeight.w400,
     height: 28 / 18,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -78,6 +87,7 @@ abstract final class AppTextStyles {
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 24 / 16,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -88,6 +98,7 @@ abstract final class AppTextStyles {
     fontSize: 16,
     fontWeight: FontWeight.w500,
     height: 24 / 16,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -98,6 +109,7 @@ abstract final class AppTextStyles {
     fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 20 / 14,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -108,6 +120,7 @@ abstract final class AppTextStyles {
     fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 20 / 14,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -118,6 +131,7 @@ abstract final class AppTextStyles {
     fontSize: 14,
     fontWeight: FontWeight.w600,
     height: 20 / 14,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -128,6 +142,7 @@ abstract final class AppTextStyles {
     fontSize: 12,
     fontWeight: FontWeight.w500,
     height: 16 / 12,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 
@@ -138,6 +153,7 @@ abstract final class AppTextStyles {
     fontSize: 24,
     fontWeight: FontWeight.w700,
     height: 32 / 24,
+    letterSpacing: _tracking,
     leadingDistribution: _leading,
   );
 }
