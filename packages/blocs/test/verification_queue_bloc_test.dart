@@ -53,4 +53,40 @@ void main() {
       VerificationQueueLoaded([jelena], selectedId: jelena.id),
     ],
   );
+
+  blocTest<VerificationQueueBloc, VerificationQueueState>(
+    'moving down selects the next profile',
+    build: buildBloc,
+    seed: () => VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
+    act: (bloc) => bloc.add(ProfileSelectionMoved(1)),
+    expect: () => [
+      VerificationQueueLoaded([jelena, petar, sara], selectedId: petar.id),
+    ],
+  );
+
+  blocTest<VerificationQueueBloc, VerificationQueueState>(
+    'moving up on the first profile stays there',
+    build: buildBloc,
+    seed: () => VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
+    act: (bloc) => bloc.add(ProfileSelectionMoved(-1)),
+    expect: () => <VerificationQueueState>[],
+  );
+
+  blocTest<VerificationQueueBloc, VerificationQueueState>(
+    'moving down on the last profile stays there',
+    build: buildBloc,
+    seed: () => VerificationQueueLoaded([jelena, petar, sara], selectedId: sara.id),
+    act: (bloc) => bloc.add(ProfileSelectionMoved(1)),
+    expect: () => <VerificationQueueState>[],
+  );
+
+  blocTest<VerificationQueueBloc, VerificationQueueState>(
+    'clicking a profile selects it',
+    build: buildBloc,
+    seed: () => VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
+    act: (bloc) => bloc.add(ProfileSelected(sara.id)),
+    expect: () => [
+      VerificationQueueLoaded([jelena, petar, sara], selectedId: sara.id),
+    ],
+  );
 }
