@@ -30,11 +30,26 @@ void main() {
     QueueRow(lesson: confirmed, actions: confirmedActions),
   ];
 
+  // Tri zahteva za isti termin i jedan za kasniji.
+  final chosen = lessonAt(now.add(const Duration(days: 5)), id: 'chosen', slot: 'thu-17');
+  final rivalA = lessonAt(now.add(const Duration(days: 5)), id: 'rival-a', slot: 'thu-17');
+  final rivalB = lessonAt(now.add(const Duration(days: 5)), id: 'rival-b', slot: 'thu-17');
+  final nextRequest = lessonAt(now.add(const Duration(days: 6)), id: 'next');
+
   late InMemoryLessonRepository repository;
 
   setUp(() => repository = InMemoryLessonRepository());
 
-  LessonQueueBloc buildBloc() => LessonQueueBloc(GetLessonQueue(repository, professor));
+  LessonQueueBloc buildBloc() {
+    final clock = FixedClock(now);
+    return LessonQueueBloc(
+      GetLessonQueue(repository, professor),
+      ConfirmLesson(repository, clock, professor),
+      RejectLesson(repository, clock, professor),
+      RecordHeld(repository, clock, professor),
+      RecordNoShow(repository, clock, professor),
+    );
+  }
 
   blocTest<LessonQueueBloc, LessonQueueState>(
     'shows the queue sorted, with the first pending request selected',
@@ -126,5 +141,123 @@ void main() {
     seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: first.id),
     act: (bloc) => bloc.add(TabChanged(QueueTab.archive)),
     expect: () => [LessonQueueLoaded(rows, tab: QueueTab.archive)],
+  );
+
+  blocTest<LessonQueueBloc, LessonQueueState>(
+    'confirming a request rejects the others for that slot and selects the next request',
+    setUp: () => repository = InMemoryLessonRepository([chosen, rivalA, rivalB, nextRequest]),
+    build: buildBloc,
+    seed: () => LessonQueueLoaded(
+      [
+        QueueRow(lesson: chosen, actions: pendingActions),
+        QueueRow(lesson: rivalA, actions: pendingActions),
+        QueueRow(lesson: rivalB, actions: pendingActions),
+        QueueRow(lesson: nextRequest, actions: pendingActions),
+      ],
+      tab: QueueTab.pending,
+      selectedId: chosen.id,
+    ),
+    act: (bloc) => bloc.add(ConfirmPressed()),
+    expect: () => [
+      LessonQueueLoaded(
+        [
+          QueueRow(
+            lesson: chosen.copyWith(status: Confirmed(at: now)),
+            actions: confirmedActions,
+          ),
+          QueueRow(
+            lesson: rivalA.copyWith(
+              status: Rejected(cause: RejectionCause.slotTaken, at: now),
+            ),
+            actions: const [],
+          ),
+          QueueRow(
+            lesson: rivalB.copyWith(
+              status: Rejected(cause: RejectionCause.slotTaken, at: now),
+            ),
+            actions: const [],
+          ),
+          QueueRow(lesson: nextRequest, actions: pendingActions),
+        ],
+        tab: QueueTab.pending,
+        selectedId: nextRequest.id,
+      ),
+    ],
+    verify: (_) => expect(
+      {for (final lesson in repository.lessons) lesson.id: lesson.status},
+      {
+        chosen.id: Confirmed(at: now),
+        rivalA.id: Rejected(cause: RejectionCause.slotTaken, at: now),
+        rivalB.id: Rejected(cause: RejectionCause.slotTaken, at: now),
+        nextRequest.id: const Pending(),
+      },
+    ),
+  );
+
+  blocTest<LessonQueueBloc, LessonQueueState>(
+    'marking a future lesson as held shows an error',
+    setUp: () => repository = InMemoryLessonRepository([confirmed]),
+    build: buildBloc,
+    seed: () => LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id),
+    act: (bloc) => bloc.add(HeldPressed()),
+    expect: () => [
+      LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id, actionError: const LessonNotStarted()),
+    ],
+    verify: (_) => expect(repository.lessons.single.status, isA<Confirmed>()),
+  );
+
+  blocTest<LessonQueueBloc, LessonQueueState>(
+    'the same error shows again on the second press',
+    setUp: () => repository = InMemoryLessonRepository([confirmed]),
+    build: buildBloc,
+    seed: () => LessonQueueLoaded(
+      rows,
+      tab: QueueTab.confirmed,
+      selectedId: confirmed.id,
+      actionError: const LessonNotStarted(),
+    ),
+    act: (bloc) => bloc.add(HeldPressed()),
+    expect: () => [
+      LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id),
+      LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id, actionError: const LessonNotStarted()),
+    ],
+  );
+
+  blocTest<LessonQueueBloc, LessonQueueState>(
+    'a second action while the first one is saving is ignored',
+    setUp: () => repository = InMemoryLessonRepository([held, first, second, confirmed]),
+    build: buildBloc,
+    seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: first.id),
+    act: (bloc) => bloc
+      ..add(ConfirmPressed())
+      ..add(RejectPressed()),
+    expect: () => [
+      LessonQueueLoaded(
+        [
+          QueueRow(lesson: held, actions: const []),
+          QueueRow(
+            lesson: first.copyWith(status: Confirmed(at: now)),
+            actions: confirmedActions,
+          ),
+          QueueRow(lesson: second, actions: pendingActions),
+          QueueRow(lesson: confirmed, actions: confirmedActions),
+        ],
+        tab: QueueTab.pending,
+        selectedId: second.id,
+      ),
+    ],
+    verify: (_) => expect(repository.lessons.firstWhere((lesson) => lesson.id == first.id).status, isA<Confirmed>()),
+  );
+
+  blocTest<LessonQueueBloc, LessonQueueState>(
+    'a repository error during an action shows a failure',
+    setUp: () => repository = InMemoryLessonRepository([first]),
+    build: buildBloc,
+    seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: first.id),
+    act: (bloc) {
+      repository.fail = true;
+      bloc.add(ConfirmPressed());
+    },
+    expect: () => [const LessonQueueFailure('Nema mreže')],
   );
 }

@@ -29,3 +29,12 @@ class SelectionMoved extends LessonQueueEvent {
 
   final int delta;
 }
+
+// Akcije nemaju čas, rade nad izabranim redom. Zato dugme i taster šalju isti događaj.
+class ConfirmPressed extends LessonQueueEvent {}
+
+class RejectPressed extends LessonQueueEvent {}
+
+class HeldPressed extends LessonQueueEvent {}
+
+class NoShowPressed extends LessonQueueEvent {}
