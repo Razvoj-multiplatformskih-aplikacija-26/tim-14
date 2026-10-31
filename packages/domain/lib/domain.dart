@@ -16,6 +16,7 @@ export 'src/listing/listing.dart';
 export 'src/listing/price.dart';
 export 'src/professor/linkedin_url.dart';
 export 'src/professor/professor_profile.dart';
+export 'src/professor/rejection_reason.dart';
 export 'src/professor/verification.dart';
 export 'src/professor/verification_status.dart';
 export 'src/result.dart';

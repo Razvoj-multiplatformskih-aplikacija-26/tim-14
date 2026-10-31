@@ -6,6 +6,7 @@ final now = DateTime.utc(2026, 11, 2, 10);
 const student = User(id: UserId('ana'), name: 'Ana', role: Role.student);
 const otherStudent = User(id: UserId('marko'), name: 'Marko', role: Role.student);
 const professor = User(id: UserId('milica'), name: 'Milica', role: Role.professor);
+const admin = User(id: UserId('jovana'), name: 'Jovana', role: Role.admin);
 
 const math = ListingId('l-math');
 const physics = ListingId('l-physics');
@@ -25,12 +26,13 @@ Lesson lessonAt(
   String id = 'lesson-1',
   String slotId = 's-1',
   UserId? studentId,
+  UserId? professorId,
   LessonStatus status = const Pending(),
 }) => Lesson(
   id: LessonId(id),
   slotId: SlotId(slotId),
   listingId: math,
-  professorId: professor.id,
+  professorId: professorId ?? professor.id,
   studentId: studentId ?? student.id,
   start: start,
   duration: LessonDuration.minutes60,
@@ -123,4 +125,33 @@ final class InMemoryProfessorRepository implements ProfessorRepository {
 
   @override
   Future<List<Slot>> slotsOf(UserId professor) async => slots.where((slot) => slot.professorId == professor).toList();
+}
+
+final class InMemoryVerificationRepository implements VerificationRepository {
+  InMemoryVerificationRepository([List<ProfessorProfile> profiles = const []]) : profiles = [...profiles];
+
+  final List<ProfessorProfile> profiles;
+  int saveCalls = 0;
+  bool fail = false;
+
+  void _check() {
+    if (fail) {
+      throw const RepositoryException('Nema mreže');
+    }
+  }
+
+  @override
+  Future<List<ProfessorProfile>> queue() async {
+    _check();
+    return profiles;
+  }
+
+  @override
+  Future<ProfessorProfile> save(ProfessorProfile profile) async {
+    _check();
+    saveCalls++;
+    profiles.removeWhere((other) => other.id == profile.id);
+    profiles.add(profile);
+    return profile;
+  }
 }

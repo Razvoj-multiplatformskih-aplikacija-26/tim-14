@@ -91,8 +91,20 @@ final class InvalidLinkedInUrl extends DomainError {
   const InvalidLinkedInUrl();
 }
 
-final class MissingRejectionReason extends DomainError {
-  const MissingRejectionReason();
+@immutable
+final class RejectionReasonTooShort extends DomainError {
+  const RejectionReasonTooShort(this.length);
+
+  final int length;
+
+  @override
+  bool operator ==(Object other) => other is RejectionReasonTooShort && other.length == length;
+
+  @override
+  int get hashCode => Object.hash(RejectionReasonTooShort, length);
+
+  @override
+  String toString() => 'RejectionReasonTooShort($length)';
 }
 
 final class SlotInPast extends DomainError {

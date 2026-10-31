@@ -34,10 +34,13 @@ jobs:
       - name: Resolve workspace
         run: flutter pub get
 
-      - name: Test domain
-        working-directory: packages/domain
-        run: dart test
-
-      - name: Test use_cases
-        working-directory: packages/use_cases
-        run: dart test
+      # dart test exits 79 when there are no tests, so a package that has none
+      # yet gets a warning instead of a red build.
+      - name: Test ${{ matrix.package }}
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          if [ -z "$(find test -name '*_test.dart' -print -quit 2>/dev/null)" ]; then
+            echo "::warning::packages/${{ matrix.package }} has no tests yet"
+            exit 0
+          fi
+          ${{ matrix.command }}

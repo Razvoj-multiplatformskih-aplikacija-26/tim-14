@@ -49,6 +49,27 @@ void main() {
     });
   });
 
+  group('RejectionReason', () {
+    test('trims the text', () {
+      expect(RejectionReason.parse('  Diploma nije čitljiva.  ').valueOrNull!.text, 'Diploma nije čitljiva.');
+    });
+
+    test('accepts ${RejectionReason.minLength} characters or more', () {
+      expect(RejectionReason.parse('a' * RejectionReason.minLength).isSuccess, isTrue);
+    });
+
+    test('refuses anything shorter', () {
+      const tooShort = RejectionReason.minLength - 1;
+      expect(RejectionReason.parse('a' * tooShort).errorOrNull, const RejectionReasonTooShort(tooShort));
+      expect(RejectionReason.parse('   ').errorOrNull, const RejectionReasonTooShort(0));
+    });
+
+    test('does not count the spaces it trims', () {
+      const tooShort = RejectionReason.minLength - 1;
+      expect(RejectionReason.parse('  ${'a' * tooShort}  ').errorOrNull, const RejectionReasonTooShort(tooShort));
+    });
+  });
+
   group('Rating', () {
     test('accepts 1 to 5 stars', () {
       for (var stars = Rating.min; stars <= Rating.max; stars++) {
