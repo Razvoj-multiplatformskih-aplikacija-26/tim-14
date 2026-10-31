@@ -11,7 +11,12 @@ final class RejectProfessor {
   final User _me;
 
   Future<Result<ProfessorProfile>> call(ProfessorProfile profile, {required String reason}) async {
-    final result = rejectVerification(profile, by: _me, reason: reason, now: _clock.now());
+    final parsed = RejectionReason.parse(reason);
+    if (parsed is Failure<RejectionReason>) {
+      return Failure(parsed.error);
+    }
+
+    final result = rejectVerification(profile, by: _me, reason: parsed.valueOrNull!, now: _clock.now());
 
     if (result is Success<ProfessorProfile>) {
       final value = result.value;

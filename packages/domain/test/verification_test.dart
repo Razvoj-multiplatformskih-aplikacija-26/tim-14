@@ -12,6 +12,7 @@ void main() {
     bio: 'Profesorka matematike.',
   );
   final linkedIn = LinkedInUrl.parse('https://www.linkedin.com/in/jelena-petrovic').valueOrNull!;
+  final reason = RejectionReason.parse('Diploma nije čitljiva.').valueOrNull!;
   final later = now.add(const Duration(days: 1));
   final submitted = submitVerification(
     profile,
@@ -26,7 +27,7 @@ void main() {
       const NotVerified(),
       AwaitingReview(submittedAt: now, diplomaFile: diplomaFile, linkedIn: linkedIn),
       Verified(by: admin.id, at: now),
-      VerificationRejected(by: admin.id, at: now, reason: 'Nečitljivo.'),
+      VerificationRejected(by: admin.id, at: now, reason: reason),
     ];
     final allowed = {
       (NotVerified, AwaitingReview),
@@ -63,32 +64,24 @@ void main() {
   });
 
   test('admin rejects with a reason', () {
-    final rejected = rejectVerification(submitted, by: admin, reason: '  Diploma nije čitljiva.  ', now: later);
-    expect(
-      rejected.valueOrNull!.verification,
-      VerificationRejected(by: admin.id, at: later, reason: 'Diploma nije čitljiva.'),
-    );
-  });
-
-  test('a rejection needs a reason', () {
-    final result = rejectVerification(submitted, by: admin, reason: '   ', now: later);
-    expect(result.errorOrNull, isA<MissingRejectionReason>());
+    final rejected = rejectVerification(submitted, by: admin, reason: reason, now: later);
+    expect(rejected.valueOrNull!.verification, VerificationRejected(by: admin.id, at: later, reason: reason));
   });
 
   test('only admins decide', () {
     expect(verifyProfessor(submitted, by: professor, now: later).errorOrNull, isA<NotAllowed>());
-    final rejected = rejectVerification(submitted, by: professor, reason: 'Ne.', now: later);
+    final rejected = rejectVerification(submitted, by: professor, reason: reason, now: later);
     expect(rejected.errorOrNull, isA<NotAllowed>());
   });
 
   test('cannot decide before the documents are submitted', () {
     expect(verifyProfessor(profile, by: admin, now: later).errorOrNull, isA<InvalidVerificationTransition>());
-    final rejected = rejectVerification(profile, by: admin, reason: 'Nema diplome.', now: later);
+    final rejected = rejectVerification(profile, by: admin, reason: reason, now: later);
     expect(rejected.errorOrNull, isA<InvalidVerificationTransition>());
   });
 
   test('professor resubmits after a rejection', () {
-    final rejected = rejectVerification(submitted, by: admin, reason: 'Nečitljivo.', now: later).valueOrNull!;
+    final rejected = rejectVerification(submitted, by: admin, reason: reason, now: later).valueOrNull!;
     final resubmitted = submitVerification(
       rejected,
       by: professor,

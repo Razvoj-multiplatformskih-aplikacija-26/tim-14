@@ -2,6 +2,7 @@ import 'package:meta/meta.dart';
 
 import '../identifiers.dart';
 import 'linkedin_url.dart';
+import 'rejection_reason.dart';
 
 sealed class VerificationStatus {
   const VerificationStatus();
@@ -65,7 +66,7 @@ final class VerificationRejected extends VerificationStatus {
 
   final UserId by;
   final DateTime at;
-  final String reason;
+  final RejectionReason reason;
 
   @override
   bool operator ==(Object other) =>
@@ -75,5 +76,5 @@ final class VerificationRejected extends VerificationStatus {
   int get hashCode => Object.hash(by, at, reason);
 
   @override
-  String toString() => 'VerificationRejected("$reason" by $by at $at)';
+  String toString() => 'VerificationRejected("${reason.text}" by $by at $at)';
 }

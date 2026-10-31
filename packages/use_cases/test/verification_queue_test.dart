@@ -6,6 +6,7 @@ import 'fakes.dart';
 
 void main() {
   final linkedIn = LinkedInUrl.parse('https://www.linkedin.com/in/jelena-petrovic').valueOrNull!;
+  final reason = RejectionReason.parse('Diploma nije čitljiva.').valueOrNull!;
 
   ProfessorProfile profileOf(String id, {VerificationStatus verification = const NotVerified()}) =>
       ProfessorProfile(id: UserId(id), fullName: id, city: City.belgrade, bio: '', verification: verification);
@@ -30,7 +31,7 @@ void main() {
         ),
         profileOf(
           'rejected',
-          verification: VerificationRejected(by: admin.id, at: now, reason: 'Nečitljivo.'),
+          verification: VerificationRejected(by: admin.id, at: now, reason: reason),
         ),
         older,
       ]);
@@ -91,19 +92,19 @@ void main() {
 
       final result = await reject(submitted, reason: '  Diploma nije čitljiva.  ');
 
-      final rejected = VerificationRejected(by: admin.id, at: now, reason: 'Diploma nije čitljiva.');
+      final rejected = VerificationRejected(by: admin.id, at: now, reason: reason);
       expect(result.valueOrNull!.verification, rejected);
       expect(repository.saveCalls, 1);
       expect(repository.profiles.single.verification, rejected);
     });
 
-    test('a rejection needs a reason', () async {
+    test('a too short reason is refused and nothing is saved', () async {
       final repository = InMemoryVerificationRepository([submitted]);
       final reject = RejectProfessor(repository, FixedClock(now), admin);
 
-      final result = await reject(submitted, reason: '   ');
+      final result = await reject(submitted, reason: 'Ne.');
 
-      expect(result, const Failure<ProfessorProfile>(MissingRejectionReason()));
+      expect(result, const Failure<ProfessorProfile>(RejectionReasonTooShort(3)));
       expect(repository.saveCalls, 0);
       expect(repository.profiles.single, submitted);
     });
@@ -112,7 +113,7 @@ void main() {
       final repository = InMemoryVerificationRepository([submitted]);
       final reject = RejectProfessor(repository, FixedClock(now), professor);
 
-      final result = await reject(submitted, reason: 'Ne.');
+      final result = await reject(submitted, reason: 'Diploma nije čitljiva.');
 
       expect(result, const Failure<ProfessorProfile>(NotAllowed()));
       expect(repository.saveCalls, 0);

@@ -4,6 +4,7 @@ import '../result.dart';
 import '../user.dart';
 import 'linkedin_url.dart';
 import 'professor_profile.dart';
+import 'rejection_reason.dart';
 import 'verification_status.dart';
 
 Result<ProfessorProfile> submitVerification(
@@ -26,13 +27,11 @@ Result<ProfessorProfile> verifyProfessor(ProfessorProfile profile, {required Use
 Result<ProfessorProfile> rejectVerification(
   ProfessorProfile profile, {
   required User by,
-  required String reason,
+  required RejectionReason reason,
   required DateTime now,
 }) {
   if (!AccessPolicy.canDecideVerification(by)) return const Failure(NotAllowed());
-  final trimmed = reason.trim();
-  if (trimmed.isEmpty) return const Failure(MissingRejectionReason());
-  return _moveTo(profile, VerificationRejected(by: by.id, at: now.toUtc(), reason: trimmed));
+  return _moveTo(profile, VerificationRejected(by: by.id, at: now.toUtc(), reason: reason));
 }
 
 Result<ProfessorProfile> _moveTo(ProfessorProfile profile, VerificationStatus next) {
