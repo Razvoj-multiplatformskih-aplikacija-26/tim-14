@@ -21,3 +21,13 @@ class ProfileSelectionMoved extends VerificationQueueEvent {
 
   final int delta;
 }
+
+// Akcije nemaju profil, rade nad izabranim redom. Zato dugme i taster šalju isti događaj.
+class VerifyPressed extends VerificationQueueEvent {}
+
+// Razlog stiže iz dijaloga. Prekratak razlog odbije use case, pa se vrati kao greška.
+class RejectProfessorPressed extends VerificationQueueEvent {
+  RejectProfessorPressed(this.reason);
+
+  final String reason;
+}

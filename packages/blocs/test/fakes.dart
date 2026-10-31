@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:domain/domain.dart';
 import 'package:use_cases/use_cases.dart';
 
@@ -5,6 +7,7 @@ final now = DateTime.utc(2026, 11, 2, 10);
 
 const student = User(id: UserId('ana'), name: 'Ana', role: Role.student);
 const professor = User(id: UserId('milica'), name: 'Milica', role: Role.professor);
+const admin = User(id: UserId('jovana'), name: 'Jovana', role: Role.admin);
 
 final message = RequestMessage.parse('Treba mi pomoć oko integrala.').valueOrNull!;
 
@@ -88,6 +91,9 @@ final class InMemoryVerificationRepository implements VerificationRepository {
   final List<ProfessorProfile> profiles;
   bool fail = false;
 
+  // Ako je postavljen, save čeka dok ga test ne pusti.
+  Completer<void>? gate;
+
   void _check() {
     if (fail) {
       throw const RepositoryException('Nema mreže');
@@ -103,6 +109,7 @@ final class InMemoryVerificationRepository implements VerificationRepository {
   @override
   Future<ProfessorProfile> save(ProfessorProfile profile) async {
     _check();
+    await gate?.future;
     profiles.removeWhere((other) => other.id == profile.id);
     profiles.add(profile);
     return profile;
