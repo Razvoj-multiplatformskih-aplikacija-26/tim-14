@@ -8,9 +8,9 @@ const professor = User(id: UserId('milica'), name: 'Milica', role: Role.professo
 
 final message = RequestMessage.parse('Treba mi pomoć oko integrala.').valueOrNull!;
 
-Lesson lessonAt(DateTime start, {required String id, LessonStatus status = const Pending()}) => Lesson(
+Lesson lessonAt(DateTime start, {required String id, String? slot, LessonStatus status = const Pending()}) => Lesson(
   id: LessonId(id),
-  slotId: SlotId('s-$id'),
+  slotId: SlotId(slot ?? 's-$id'),
   listingId: const ListingId('l-math'),
   professorId: professor.id,
   studentId: student.id,
