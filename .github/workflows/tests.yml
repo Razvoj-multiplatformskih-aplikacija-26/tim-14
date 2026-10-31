@@ -19,6 +19,8 @@ jobs:
             command: flutter test
           - package: use_cases
             command: dart test
+          - package: blocs
+            command: dart test
 
     steps:
       - uses: actions/checkout@v4
