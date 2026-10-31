@@ -9,6 +9,9 @@ class LessonQueueBloc extends Bloc<LessonQueueEvent, LessonQueueState> {
   LessonQueueBloc(this._getQueue) : super(const LessonQueueInitial()) {
     on<QueueRequested>(_onRequested);
     on<QueueRetried>(_onRetried);
+    on<TabChanged>(_onTabChanged);
+    on<RowSelected>(_onRowSelected);
+    on<SelectionMoved>(_onSelectionMoved);
   }
 
   final GetLessonQueue _getQueue;
@@ -19,6 +22,30 @@ class LessonQueueBloc extends Bloc<LessonQueueEvent, LessonQueueState> {
 
   Future<void> _onRetried(QueueRetried event, Emitter<LessonQueueState> emit) async {
     await _load(emit);
+  }
+
+  // Novo stanje se pravi bez actionError, inače bi se SnackBar ponovo pokazao na svaku strelicu.
+  void _onTabChanged(TabChanged event, Emitter<LessonQueueState> emit) {
+    final current = state;
+    if (current is! LessonQueueLoaded) return;
+    emit(LessonQueueLoaded(current.rows, tab: event.tab, selectedId: _firstIn(current.rows, event.tab)));
+  }
+
+  void _onRowSelected(RowSelected event, Emitter<LessonQueueState> emit) {
+    final current = state;
+    if (current is! LessonQueueLoaded) return;
+    emit(LessonQueueLoaded(current.rows, tab: current.tab, selectedId: event.id));
+  }
+
+  // Na prvom i poslednjem redu izbor ostaje gde je.
+  void _onSelectionMoved(SelectionMoved event, Emitter<LessonQueueState> emit) {
+    final current = state;
+    if (current is! LessonQueueLoaded) return;
+    final visible = current.visibleRows;
+    if (visible.isEmpty) return;
+    final index = visible.indexWhere((row) => row.lesson.id == current.selectedId);
+    final next = (index + event.delta).clamp(0, visible.length - 1);
+    emit(LessonQueueLoaded(current.rows, tab: current.tab, selectedId: visible[next].lesson.id));
   }
 
   Future<void> _load(Emitter<LessonQueueState> emit) async {
