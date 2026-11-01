@@ -98,7 +98,11 @@ class _NavTile extends StatelessWidget {
       borderRadius: radius,
       child: InkWell(
         borderRadius: radius,
-        onTap: () => context.go(item.path),
+        // U fioki klik prvo zatvara fioku. Na širokom prozoru fioke nema, pa closeDrawer ne radi ništa.
+        onTap: () {
+          Scaffold.of(context).closeDrawer();
+          context.go(item.path);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.px12, vertical: AppSpacing.px8),
           child: Row(

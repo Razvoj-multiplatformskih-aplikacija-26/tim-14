@@ -88,6 +88,33 @@ void main() {
     expect(find.text('Sledeći zahtev će vratiti grešku.'), findsOneWidget);
   });
 
+  testWidgets('a narrow window hides the sidebar behind the menu button', (tester) async {
+    await pumpApp(tester);
+    useNarrowSize(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(Sidebar), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+
+    expect(navItem('Časovi'), findsOneWidget);
+    expect(find.text(milica.name), findsOneWidget);
+  });
+
+  testWidgets('tapping Časovi in the drawer closes the drawer', (tester) async {
+    await pumpApp(tester);
+    useNarrowSize(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+
+    await tester.tap(navItem('Časovi'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Sidebar), findsNothing);
+    expect(location(), Routes.lessons);
+  });
+
   testWidgets('both Blocs are provided and load from the fake repositories', (tester) async {
     await pumpApp(tester);
     final context = tester.element(find.byType(LessonQueuePage));

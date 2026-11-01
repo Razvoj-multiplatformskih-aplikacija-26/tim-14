@@ -10,22 +10,27 @@ class QueueTabs extends StatelessWidget {
 
   final LessonQueueLoaded state;
 
+  // Tabovi su široki oko 440 px. Kad strana nema toliko mesta, skroluju se levo-desno umesto da izađu iz ekrana.
+  // Na širokom prozoru skrol je tačno veličine tabova, pa se ništa ne menja.
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppExtraColors.of(context).muted,
-        borderRadius: const BorderRadius.all(Radius.circular(AppRadius.lg)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.px4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: AppSpacing.px4,
-          children: [
-            for (final tab in QueueTab.values)
-              _Tab(tab: tab, count: state.rows.where((row) => row.tab == tab).length, selected: tab == state.tab),
-          ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppExtraColors.of(context).muted,
+          borderRadius: const BorderRadius.all(Radius.circular(AppRadius.lg)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.px4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: AppSpacing.px4,
+            children: [
+              for (final tab in QueueTab.values)
+                _Tab(tab: tab, count: state.rows.where((row) => row.tab == tab).length, selected: tab == state.tab),
+            ],
+          ),
         ),
       ),
     );
