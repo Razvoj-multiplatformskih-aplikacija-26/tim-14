@@ -9,11 +9,13 @@ import '../text/dates.dart';
 // Isti flex za zaglavlje i redove, da kolone budu poravnate.
 const _flex = (student: 3, listing: 4, start: 3, status: 3, received: 3);
 
-// Lista redova umesto DataTable: svaki red je naš widget, pa se lako boji izbor i kasnije dodaje tastatura.
+// Lista redova umesto DataTable: svaki red je naš widget, pa se lako boji izbor.
+// Tastaturu hvata strana oko tabele, a tabela samo crta da li je fokus na njoj.
 class QueueTable extends StatelessWidget {
-  const QueueTable({super.key, required this.state});
+  const QueueTable({super.key, required this.state, required this.focused});
 
   final LessonQueueLoaded state;
+  final bool focused;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,10 @@ class QueueTable extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: radius,
-        border: Border.all(color: AppExtraColors.of(context).border),
+        // Vidljiv fokus: prsten u boji ring, kao kod dugmadi.
+        border: focused
+            ? Border.all(color: AppColors.ring, width: 2)
+            : Border.all(color: AppExtraColors.of(context).border),
       ),
       child: ClipRRect(
         borderRadius: radius,
@@ -104,6 +109,8 @@ class _QueueRowTile extends StatelessWidget {
     return Material(
       color: selected ? colors.primaryContainer : Colors.transparent,
       child: InkWell(
+        // Red ne uzima fokus, pa je cela tabela jedan korak za Tab, a strelice biraju red unutar nje.
+        canRequestFocus: false,
         onTap: () => context.read<LessonQueueBloc>().add(RowSelected(lesson.id)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.px16, vertical: AppSpacing.px12),

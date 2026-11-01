@@ -1,6 +1,7 @@
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ui/ui.dart';
 
@@ -64,17 +65,43 @@ class _LoadedView extends StatelessWidget {
   // Izbor je u Blocu, pa ostaje isti kad se tabela zameni listom i nazad.
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) =>
-          constraints.maxWidth < _wideMinWidth ? _NarrowView(state: state) : _WideView(state: state),
+    final bloc = context.read<LessonQueueBloc>();
+    // Taster šalje isti događaj kao dugme. Koji red menja, Bloc zna iz izbora.
+    // Prečice čuju taster samo kad je fokus negde ispod njih, zato Focus ispod.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowUp): () => bloc.add(SelectionMoved(-1)),
+        const SingleActivator(LogicalKeyboardKey.arrowDown): () => bloc.add(SelectionMoved(1)),
+        // Bez ponavljanja: držanje P ne potvrdi i sledeći zahtev koji Bloc izabere.
+        const SingleActivator(LogicalKeyboardKey.keyP, includeRepeats: false): () => bloc.add(ConfirmPressed()),
+        const SingleActivator(LogicalKeyboardKey.keyO, includeRepeats: false): () => bloc.add(RejectPressed()),
+      },
+      // autofocus: tasteri rade čim se tabela pojavi, bez klika.
+      // Focus je iznad LayoutBuilder-a, pa ostaje isti kad se tabela zameni listom.
+      child: Focus(
+        autofocus: true,
+        // Builder daje context ispod Focus-a, pa Focus.of vidi baš ovaj čvor i crta ponovo kad se fokus promeni.
+        child: Builder(
+          builder: (context) {
+            // Samo kad fokus drži baš ovaj čvor. Kad je na dugmetu, prsten crta dugme.
+            final focused = Focus.of(context).hasPrimaryFocus;
+            return LayoutBuilder(
+              builder: (context, constraints) => constraints.maxWidth < _wideMinWidth
+                  ? _NarrowView(state: state)
+                  : _WideView(state: state, focused: focused),
+            );
+          },
+        ),
+      ),
     );
   }
 }
 
 class _WideView extends StatelessWidget {
-  const _WideView({required this.state});
+  const _WideView({required this.state, required this.focused});
 
   final LessonQueueLoaded state;
+  final bool focused;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +115,9 @@ class _WideView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: AppSpacing.px24,
             children: [
-              Expanded(child: QueueTable(state: state)),
+              Expanded(
+                child: QueueTable(state: state, focused: focused),
+              ),
               SizedBox(width: 380, child: LessonDetail(row: state.selected)),
             ],
           ),
