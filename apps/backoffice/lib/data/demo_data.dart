@@ -37,6 +37,11 @@ const listingTitles = <ListingId, String>{
   _prijemni: 'Matematika za prijemni na FTN',
 };
 
+// Ako imena nema u mapi, ekran pokaže id, da ne bi pukao.
+String studentName(UserId id) => studentNames[id] ?? id.value;
+
+String listingTitle(ListingId id) => listingTitles[id] ?? id.value;
+
 const _durations = <ListingId, LessonDuration>{
   _srednja: LessonDuration.minutes60,
   _malaMatura: LessonDuration.minutes45,
