@@ -1,7 +1,9 @@
+import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'data/fail_switch.dart';
+import 'screens/lesson_detail_screen.dart';
 import 'screens/my_lessons_screen.dart';
 import 'screens/professors_screen.dart';
 
@@ -17,6 +19,12 @@ GoRouter createRouter(FailSwitch failSwitch) {
               GoRoute(
                 path: '/casovi',
                 builder: (context, state) => MyLessonsScreen(failSwitch: failSwitch),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => LessonDetailScreen(lessonId: LessonId(state.pathParameters['id']!)),
+                  ),
+                ],
               ),
             ],
           ),

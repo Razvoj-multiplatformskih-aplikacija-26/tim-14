@@ -116,14 +116,14 @@ class _LessonList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.px16),
       children: [
-        if (upcoming.isNotEmpty) ..._section('Predstojeći', upcoming),
-        if (pending.isNotEmpty) ..._section('Na čekanju', pending),
-        if (past.isNotEmpty) ..._section('Prošli', pastNewestFirst),
+        if (upcoming.isNotEmpty) ..._section(context, 'Predstojeći', upcoming),
+        if (pending.isNotEmpty) ..._section(context, 'Na čekanju', pending),
+        if (past.isNotEmpty) ..._section(context, 'Prošli', pastNewestFirst),
       ],
     );
   }
 
-  List<Widget> _section(String title, List<LessonItem> items) {
+  List<Widget> _section(BuildContext context, String title, List<LessonItem> items) {
     return [
       Padding(
         padding: const EdgeInsets.only(top: AppSpacing.px8, bottom: AppSpacing.px8),
@@ -132,7 +132,7 @@ class _LessonList extends StatelessWidget {
       for (final item in items)
         Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.px8),
-          child: LessonCard(lesson: item.lesson),
+          child: LessonCard(lesson: item.lesson, onTap: () => context.go('/casovi/${item.lesson.id.value}')),
         ),
     ];
   }
