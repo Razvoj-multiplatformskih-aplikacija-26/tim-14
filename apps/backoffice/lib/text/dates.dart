@@ -14,4 +14,7 @@ String formatShortDateTime(DateTime at) {
   return '${local.day}. ${_months[local.month - 1]} ${_time(local)}';
 }
 
+// „2014 – 2019“ za obrazovanje i iskustvo. Bez godine kraja profesor je i dalje tamo.
+String formatYears(int fromYear, int? toYear) => '$fromYear – ${toYear ?? 'danas'}';
+
 String _time(DateTime local) => '${local.hour}:${local.minute.toString().padLeft(2, '0')}';

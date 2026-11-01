@@ -21,4 +21,9 @@ void main() {
   test('the short form drops the weekday', () {
     expect(formatShortDateTime(DateTime(2026, 10, 30, 10)), '30. okt 10:00');
   });
+
+  test('a year range without an end says danas', () {
+    expect(formatYears(2014, 2019), '2014 – 2019');
+    expect(formatYears(2019, null), '2019 – danas');
+  });
 }

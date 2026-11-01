@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ui/ui.dart';
 
 import '../text/domain_errors.dart';
+import '../widgets/centered_message.dart';
 import 'lesson_detail.dart';
 import 'queue_list.dart';
 import 'queue_table.dart';
@@ -167,7 +168,7 @@ class _FailureView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CenteredMessage(
+    return CenteredMessage(
       icon: Icons.cloud_off_outlined,
       title: 'Časovi nisu učitani.',
       text: message,
@@ -184,41 +185,10 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _CenteredMessage(
+    return const CenteredMessage(
       icon: Icons.event_available_outlined,
       title: 'Još nema zahteva za časove.',
       text: 'Kad učenik zatraži termin iz vašeg oglasa, zahtev će se pojaviti ovde.',
-    );
-  }
-}
-
-// Zajednički izgled za grešku i prazan ekran.
-class _CenteredMessage extends StatelessWidget {
-  const _CenteredMessage({required this.icon, required this.title, required this.text, this.action});
-
-  final IconData icon;
-  final String title;
-  final String text;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: AppSpacing.px12,
-        children: [
-          Icon(icon, size: 40, color: colors.onSurfaceVariant),
-          Text(title, style: AppTextStyles.headingLg.copyWith(color: colors.onSurface)),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodySm.copyWith(color: colors.onSurfaceVariant),
-          ),
-          ?action,
-        ],
-      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:ui/ui.dart';
 
 import '../data/demo_data.dart';
 import '../text/dates.dart';
+import '../widgets/detail_section.dart';
 import 'timeline.dart';
 
 // Figma: kartica desno u „Poruke · split“. Pokazuje izabrani red: poruku, tok i dugmad.
@@ -45,7 +46,7 @@ class LessonDetail extends StatelessWidget {
                   const Divider(height: 1),
                   Padding(
                     padding: const EdgeInsets.all(AppSpacing.px24),
-                    child: _Section(
+                    child: DetailSection(
                       title: 'PROMENI STATUS',
                       child: Wrap(
                         spacing: AppSpacing.px8,
@@ -108,32 +109,13 @@ class _Content extends StatelessWidget {
             child: Text(lesson.message.text, style: AppTextStyles.bodyBase.copyWith(color: colors.onSurface)),
           ),
         ),
-        _Section(
+        DetailSection(
           title: 'TOK',
           child: Column(
             spacing: AppSpacing.px8,
             children: [for (final step in timelineOf(lesson)) _TimelineLine(step: step)],
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpacing.px12,
-      children: [
-        Text(title, style: AppTextStyles.captionXs.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        child,
       ],
     );
   }
