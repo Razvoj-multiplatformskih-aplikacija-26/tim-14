@@ -1,5 +1,4 @@
 import 'package:blocs/blocs.dart';
-import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -41,7 +40,7 @@ class MyLessonsScreen extends StatelessWidget {
             case MyLessonsEmpty():
               return const _EmptyView();
             case MyLessonsLoaded():
-              return _LessonList(items: state.items);
+              return _LessonList(state: state);
           }
         },
       ),
@@ -99,26 +98,23 @@ class _EmptyView extends StatelessWidget {
 }
 
 class _LessonList extends StatelessWidget {
-  const _LessonList({required this.items});
+  const _LessonList({required this.state});
 
-  final List<LessonItem> items;
+  final MyLessonsLoaded state;
 
   @override
   Widget build(BuildContext context) {
-    // Grupe su samo za prikaz: potvrđeni su predstojeći, na čekanju čekaju profesora, ostalo je prošlo.
-    final upcoming = items.where((item) => item.lesson.status is Confirmed).toList();
-    final pending = items.where((item) => item.lesson.status is Pending).toList();
-    final past = items.where((item) => item.lesson.status is! Confirmed && item.lesson.status is! Pending).toList();
-
-    // Prošli su najnoviji prvi.
-    final pastNewestFirst = past.reversed.toList();
+    // Grupe pravi stanje iz Bloc-a, ekran ih samo crta.
+    final upcoming = state.upcoming;
+    final pending = state.pending;
+    final past = state.past;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.px16),
       children: [
         if (upcoming.isNotEmpty) ..._section(context, 'Predstojeći', upcoming),
         if (pending.isNotEmpty) ..._section(context, 'Na čekanju', pending),
-        if (past.isNotEmpty) ..._section(context, 'Prošli', pastNewestFirst),
+        if (past.isNotEmpty) ..._section(context, 'Prošli', past),
       ],
     );
   }

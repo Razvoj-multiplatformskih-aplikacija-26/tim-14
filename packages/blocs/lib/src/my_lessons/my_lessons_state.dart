@@ -53,6 +53,18 @@ class MyLessonsLoaded extends MyLessonsState {
   // Greška poslednje akcije, ekran je prikaže kao SnackBar.
   final DomainError? actionError;
 
+  // Grupe za ekran: potvrđeni su predstojeći, na čekanju čekaju profesora, ostalo je prošlo.
+  List<LessonItem> get upcoming => items.where((item) => item.lesson.status is Confirmed).toList();
+
+  List<LessonItem> get pending => items.where((item) => item.lesson.status is Pending).toList();
+
+  // Prošli su najnoviji prvi.
+  List<LessonItem> get past => items
+      .where((item) => item.lesson.status is! Confirmed && item.lesson.status is! Pending)
+      .toList()
+      .reversed
+      .toList();
+
   @override
   List<Object?> get props => [items, actionError];
 }

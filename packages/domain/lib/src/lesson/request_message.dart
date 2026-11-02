@@ -12,9 +12,12 @@ final class RequestMessage {
 
   final String text;
 
+  // Koliko znakova se broji: bez razmaka na krajevima, emoji je jedan znak.
+  static int lengthOf(String input) => input.trim().characters.length;
+
   static Result<RequestMessage> parse(String input) {
     final text = input.trim();
-    final length = text.characters.length;
+    final length = lengthOf(input);
     if (length == 0 || length > maxLength) return Failure(InvalidRequestMessage(length));
     return Success(RequestMessage._(text));
   }

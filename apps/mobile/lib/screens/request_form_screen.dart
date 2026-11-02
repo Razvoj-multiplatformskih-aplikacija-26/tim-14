@@ -82,9 +82,6 @@ class _Form extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final mutedColor = scheme.onSurfaceVariant;
     final bloc = context.read<RequestFormBloc>();
-    // Broji se isto kao u domenu, bez razmaka na krajevima.
-    final length = state.message.trim().characters.length;
-    final isTooLong = length > RequestMessage.maxLength;
 
     // Greška pri slanju: pravilo iz domena ili mreža.
     String? errorText;
@@ -148,10 +145,10 @@ class _Form extends StatelessWidget {
             alignLabelWithHint: true,
             border: const OutlineInputBorder(),
             errorText: state.messageError?.message,
-            // Brojač postaje crven kad se pređe 300 znakova.
+            // Brojač je crven kad domen kaže da poruka nije dobra.
             counter: Text(
-              '$length/${RequestMessage.maxLength}',
-              style: AppTextStyles.captionXs.copyWith(color: isTooLong ? scheme.error : mutedColor),
+              '${state.messageLength}/${RequestMessage.maxLength}',
+              style: AppTextStyles.captionXs.copyWith(color: state.messageError != null ? scheme.error : mutedColor),
             ),
           ),
         ),

@@ -65,6 +65,7 @@ class RequestFormBloc extends Bloc<RequestFormEvent, RequestFormState> {
         listing: current.listing,
         slot: current.slot,
         message: event.text,
+        messageLength: RequestMessage.lengthOf(event.text),
         messageError: error,
       ),
     );
@@ -82,6 +83,7 @@ class RequestFormBloc extends Bloc<RequestFormEvent, RequestFormState> {
         listing: current.listing,
         slot: current.slot,
         message: current.message,
+        messageLength: current.messageLength,
         isSending: true,
       ),
     );
@@ -98,6 +100,7 @@ class RequestFormBloc extends Bloc<RequestFormEvent, RequestFormState> {
               listing: current.listing,
               slot: current.slot,
               message: current.message,
+              messageLength: current.messageLength,
               submitError: error,
             ),
           );
@@ -109,6 +112,7 @@ class RequestFormBloc extends Bloc<RequestFormEvent, RequestFormState> {
           listing: current.listing,
           slot: current.slot,
           message: current.message,
+          messageLength: current.messageLength,
           networkError: e.message,
         ),
       );

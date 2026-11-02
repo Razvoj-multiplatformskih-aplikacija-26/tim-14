@@ -32,6 +32,22 @@ void main() {
     expect(result[1].listings, isEmpty);
   });
 
+  test('lowestPrice is the price of the cheapest listing', () {
+    final physicsListing = Listing(
+      id: physics,
+      professorId: professor.id,
+      subject: Subject.physics,
+      level: Level.highSchool,
+      city: City.belgrade,
+      description: 'Fizika za srednju školu',
+      price: Price.parse(1800).valueOrNull!,
+      duration: LessonDuration.minutes60,
+    );
+
+    expect(ProfessorSummary(profile: milica, listings: [mathListing, physicsListing]).lowestPrice?.dinars, 1800);
+    expect(const ProfessorSummary(profile: nikola, listings: []).lowestPrice, isNull);
+  });
+
   test('GetProfessorPage hides slots that already have a confirmed lesson', () async {
     final taken = slotAt(inThreeDays, id: 's-taken');
     final free = slotAt(inFourDays, id: 's-free');
