@@ -6,6 +6,8 @@ import 'package:mobile/data/fail_switch.dart';
 import 'package:mobile/data/fake_lesson_repository.dart';
 import 'package:use_cases/use_cases.dart';
 
+import 'helpers.dart';
+
 void main() {
   const clock = SystemClock();
 
@@ -17,7 +19,15 @@ void main() {
 
     final failSwitch = FailSwitch();
     final lessons = FakeLessonRepository(demoLessons(clock.now()), failSwitch);
-    await tester.pumpWidget(App(lessons: lessons, clock: clock, me: ana, failSwitch: failSwitch));
+    await tester.pumpWidget(
+      App(
+        lessons: lessons,
+        professors: demoProfessorRepository(failSwitch),
+        clock: clock,
+        me: ana,
+        failSwitch: failSwitch,
+      ),
+    );
     await tester.pumpAndSettle(const Duration(seconds: 1));
   }
 

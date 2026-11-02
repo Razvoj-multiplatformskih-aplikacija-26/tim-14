@@ -29,7 +29,12 @@ GoRouter createRouter(FailSwitch failSwitch) {
             ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/profesori', builder: (context, state) => const ProfessorsScreen())],
+            routes: [
+              GoRoute(
+                path: '/profesori',
+                builder: (context, state) => ProfessorsScreen(failSwitch: failSwitch),
+              ),
+            ],
           ),
         ],
       ),

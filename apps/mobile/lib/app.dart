@@ -10,9 +10,17 @@ import 'data/fail_switch.dart';
 import 'router.dart';
 
 class App extends StatefulWidget {
-  const App({super.key, required this.lessons, required this.clock, required this.me, required this.failSwitch});
+  const App({
+    super.key,
+    required this.lessons,
+    required this.professors,
+    required this.clock,
+    required this.me,
+    required this.failSwitch,
+  });
 
   final LessonRepository lessons;
+  final ProfessorRepository professors;
   final Clock clock;
   final User me;
   final FailSwitch failSwitch;
@@ -27,14 +35,20 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => MyLessonsBloc(
-        GetMyLessons(widget.lessons, widget.me),
-        WithdrawRequest(widget.lessons, widget.clock, widget.me),
-        CancelLesson(widget.lessons, widget.clock, widget.me),
-        widget.clock,
-        widget.me,
-      )..add(MyLessonsRequested()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => MyLessonsBloc(
+            GetMyLessons(widget.lessons, widget.me),
+            WithdrawRequest(widget.lessons, widget.clock, widget.me),
+            CancelLesson(widget.lessons, widget.clock, widget.me),
+            widget.clock,
+            widget.me,
+          )..add(MyLessonsRequested()),
+        ),
+        // Pravi se tek kad se prvi put otvori tab Profesori.
+        BlocProvider(create: (context) => ProfessorsBloc(GetProfessors(widget.professors))..add(ProfessorsRequested())),
+      ],
       child: MaterialApp.router(
         title: 'Časovi',
         debugShowCheckedModeBanner: false,
