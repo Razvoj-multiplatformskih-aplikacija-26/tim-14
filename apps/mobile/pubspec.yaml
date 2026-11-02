@@ -29,3 +29,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+# Ikonica aplikacije: `dart run flutter_launcher_icons` u apps/mobile napravi sve veličine iz jedne slike.
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
