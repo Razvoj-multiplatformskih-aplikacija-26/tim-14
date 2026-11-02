@@ -117,10 +117,11 @@ final class InMemoryVerificationRepository implements VerificationRepository {
 }
 
 final class InMemoryProfessorRepository implements ProfessorRepository {
-  InMemoryProfessorRepository({this.profiles = const [], this.listings = const []});
+  InMemoryProfessorRepository({this.profiles = const [], this.listings = const [], this.slots = const []});
 
   final List<ProfessorProfile> profiles;
   final List<Listing> listings;
+  final List<Slot> slots;
   bool fail = false;
 
   void _check() {
@@ -148,5 +149,8 @@ final class InMemoryProfessorRepository implements ProfessorRepository {
   }
 
   @override
-  Future<List<Slot>> slotsOf(UserId professor) async => [];
+  Future<List<Slot>> slotsOf(UserId professor) async {
+    _check();
+    return slots.where((slot) => slot.professorId == professor).toList();
+  }
 }
