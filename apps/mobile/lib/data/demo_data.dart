@@ -10,6 +10,8 @@ const _jelena = UserId('jelena-markovic');
 const _milan = UserId('milan-djuric');
 
 const _srednja = ListingId('l-srednja');
+const _fakultet = ListingId('l-fakultet');
+const _fizika = ListingId('l-fizika');
 const _malaMatura = ListingId('l-mala-matura');
 const _gimnazija = ListingId('l-gimnazija');
 const _prijemni = ListingId('l-prijemni');
@@ -25,10 +27,108 @@ const professorNames = <UserId, String>{
 
 const listingTitles = <ListingId, String>{
   _srednja: 'Matematika za srednju školu i pripremu za fakultet',
+  _fakultet: 'Analiza za studente prve godine',
+  _fizika: 'Fizika za srednju školu',
   _malaMatura: 'Priprema za malu maturu',
   _gimnazija: 'Matematika i fizika za gimnazijalce',
   _prijemni: 'Matematika za prijemni na FTN',
 };
+
+final _verifiedAt = DateTime.utc(2026, 9, 15);
+const _admin = UserId('jovana-ilic');
+
+// Bar dva verifikovana, da se na listi vidi bedž „Diploma potvrđena“.
+final demoProfessors = <ProfessorProfile>[
+  ProfessorProfile(
+    id: _milica,
+    fullName: professorNames[_milica]!,
+    city: City.belgrade,
+    bio: 'Profesorka matematike u gimnaziji, deset godina pripremam učenike za prijemni.',
+    verification: Verified(by: _admin, at: _verifiedAt),
+  ),
+  ProfessorProfile(
+    id: _nikola,
+    fullName: professorNames[_nikola]!,
+    city: City.noviSad,
+    bio: 'Inženjer fizike, strpljivo objašnjavam kroz mnogo primera iz života.',
+  ),
+  ProfessorProfile(
+    id: _anaK,
+    fullName: professorNames[_anaK]!,
+    city: City.kragujevac,
+    bio: 'Doktorantkinja na PMF-u, spremam kandidate za prijemni na tehničkim fakultetima.',
+    verification: Verified(by: _admin, at: _verifiedAt),
+  ),
+  ProfessorProfile(
+    id: _jelena,
+    fullName: professorNames[_jelena]!,
+    city: City.noviSad,
+    bio: 'Predajem matematiku i fiziku srednjoškolcima, najviše radim sa trećim i četvrtim razredom.',
+    verification: Verified(by: _admin, at: _verifiedAt),
+  ),
+  ProfessorProfile(
+    id: _milan,
+    fullName: professorNames[_milan]!,
+    city: City.nis,
+    bio: 'Spremam osmake za malu maturu, strpljivo i kroz mnogo zadataka.',
+  ),
+];
+
+final demoListings = <Listing>[
+  _listing(_srednja, _milica, Subject.mathematics, Level.highSchool, City.belgrade, 2000),
+  _listing(_fakultet, _milica, Subject.mathematics, Level.university, City.belgrade, 2500),
+  _listing(_fizika, _nikola, Subject.physics, Level.highSchool, City.noviSad, 1800),
+  _listing(_prijemni, _anaK, Subject.mathematics, Level.entranceExam, City.kragujevac, 2500),
+  _listing(_gimnazija, _jelena, Subject.mathematics, Level.highSchool, City.noviSad, 2200),
+  _listing(_malaMatura, _milan, Subject.mathematics, Level.primarySchool, City.nis, 1500),
+];
+
+Listing _listing(ListingId id, UserId professor, Subject subject, Level level, City city, int price) => Listing(
+  id: id,
+  professorId: professor,
+  subject: subject,
+  level: level,
+  city: city,
+  description: listingTitles[id]!,
+  price: Price.parse(price).valueOrNull!,
+  duration: LessonDuration.minutes60,
+);
+
+// Termini su oni na kojima su već časovi, plus po tri nova slobodna za svaki oglas.
+// Novi su 2 do 7 dana od danas, jer zahtev mora biti bar 24 sata unapred.
+List<Slot> demoSlots(DateTime now) {
+  final slots = <Slot>[];
+
+  for (final lesson in demoLessons(now)) {
+    slots.add(
+      Slot(
+        id: lesson.slotId,
+        listingId: lesson.listingId,
+        professorId: lesson.professorId,
+        start: lesson.start,
+        duration: lesson.duration,
+      ),
+    );
+  }
+
+  for (final listing in demoListings) {
+    final days = [2, 4, 6];
+    final hours = [10, 14, 18];
+    for (var i = 0; i < days.length; i++) {
+      slots.add(
+        Slot(
+          id: SlotId('s-${listing.id.value}-$i'),
+          listingId: listing.id,
+          professorId: listing.professorId,
+          start: _dayAt(now, days[i], hours[i]),
+          duration: listing.duration,
+        ),
+      );
+    }
+  }
+
+  return slots;
+}
 
 // Pun sat, da na kartici ne piše 14:37.
 DateTime _dayAt(DateTime now, int days, int hour) {
@@ -58,7 +158,7 @@ List<Lesson> demoLessons(DateTime now) {
     _lesson(
       'c-02',
       professor: _nikola,
-      listing: _gimnazija,
+      listing: _fizika,
       start: dayAt(5, 18),
       createdAt: hoursAgo(20),
       message: 'Treba mi pomoć iz fizike, kretanje i Njutnovi zakoni.',
@@ -113,7 +213,7 @@ List<Lesson> demoLessons(DateTime now) {
     _lesson(
       'c-08',
       professor: _nikola,
-      listing: _gimnazija,
+      listing: _fizika,
       start: dayAt(-3, 18),
       createdAt: dayAt(-8, 10),
       message: 'Možemo li da ponovimo električno polje?',

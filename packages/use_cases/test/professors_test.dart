@@ -22,10 +22,14 @@ void main() {
   final inThreeDays = now.add(const Duration(days: 3));
   final inFourDays = now.add(const Duration(days: 4));
 
-  test('GetProfessors returns all professors', () async {
-    final repository = InMemoryProfessorRepository(profiles: [milica, nikola]);
+  test('GetProfessors returns every professor with their own listings', () async {
+    final repository = InMemoryProfessorRepository(profiles: [milica, nikola], listings: [mathListing]);
 
-    expect(await GetProfessors(repository)(), [milica, nikola]);
+    final result = await GetProfessors(repository)();
+
+    expect(result.map((summary) => summary.profile), [milica, nikola]);
+    expect(result[0].listings, [mathListing]);
+    expect(result[1].listings, isEmpty);
   });
 
   test('GetProfessorPage hides slots that already have a confirmed lesson', () async {

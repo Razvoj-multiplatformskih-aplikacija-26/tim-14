@@ -115,3 +115,38 @@ final class InMemoryVerificationRepository implements VerificationRepository {
     return profile;
   }
 }
+
+final class InMemoryProfessorRepository implements ProfessorRepository {
+  InMemoryProfessorRepository({this.profiles = const [], this.listings = const []});
+
+  final List<ProfessorProfile> profiles;
+  final List<Listing> listings;
+  bool fail = false;
+
+  void _check() {
+    if (fail) {
+      throw const RepositoryException('Nema mreže');
+    }
+  }
+
+  @override
+  Future<List<ProfessorProfile>> professors() async {
+    _check();
+    return profiles;
+  }
+
+  @override
+  Future<ProfessorProfile> profile(UserId id) async {
+    _check();
+    return profiles.firstWhere((profile) => profile.id == id);
+  }
+
+  @override
+  Future<List<Listing>> listingsOf(UserId professor) async {
+    _check();
+    return listings.where((listing) => listing.professorId == professor).toList();
+  }
+
+  @override
+  Future<List<Slot>> slotsOf(UserId professor) async => [];
+}

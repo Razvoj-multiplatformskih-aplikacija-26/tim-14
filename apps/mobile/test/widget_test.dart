@@ -7,6 +7,8 @@ import 'package:mobile/data/fail_switch.dart';
 import 'package:mobile/data/fake_lesson_repository.dart';
 import 'package:use_cases/use_cases.dart';
 
+import 'helpers.dart';
+
 void main() {
   const clock = SystemClock();
 
@@ -14,7 +16,15 @@ void main() {
     final failSwitch = FailSwitch();
     final lessons = FakeLessonRepository(demoLessons(clock.now()), failSwitch);
 
-    await tester.pumpWidget(App(lessons: lessons, clock: clock, me: ana, failSwitch: failSwitch));
+    await tester.pumpWidget(
+      App(
+        lessons: lessons,
+        professors: demoProfessorRepository(failSwitch),
+        clock: clock,
+        me: ana,
+        failSwitch: failSwitch,
+      ),
+    );
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     await tester.pumpAndSettle(const Duration(seconds: 1));
@@ -27,7 +37,15 @@ void main() {
     final failSwitch = FailSwitch()..failNext = true;
     final lessons = FakeLessonRepository(demoLessons(clock.now()), failSwitch);
 
-    await tester.pumpWidget(App(lessons: lessons, clock: clock, me: ana, failSwitch: failSwitch));
+    await tester.pumpWidget(
+      App(
+        lessons: lessons,
+        professors: demoProfessorRepository(failSwitch),
+        clock: clock,
+        me: ana,
+        failSwitch: failSwitch,
+      ),
+    );
     await tester.pumpAndSettle(const Duration(seconds: 1));
     expect(find.text('Pokušaj ponovo'), findsOneWidget);
 
@@ -38,7 +56,13 @@ void main() {
 
   testWidgets('shows the empty state when there are no lessons', (tester) async {
     await tester.pumpWidget(
-      App(lessons: const EmptyLessonRepository(), clock: clock, me: ana, failSwitch: FailSwitch()),
+      App(
+        lessons: const EmptyLessonRepository(),
+        professors: demoProfessorRepository(FailSwitch()),
+        clock: clock,
+        me: ana,
+        failSwitch: FailSwitch(),
+      ),
     );
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
