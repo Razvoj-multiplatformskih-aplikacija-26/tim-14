@@ -9,9 +9,10 @@ import '../text/dates.dart';
 // Figma: „Poruke · mobile lista“. Uzak prozor dobija kartice umesto tabele, sa istim redovima iz Bloca.
 // Klik ne bira red sam, nego javlja roditelju, jer roditelj i bira red i otvara detalj.
 class QueueList extends StatelessWidget {
-  const QueueList({super.key, required this.state, required this.onOpen});
+  const QueueList({super.key, required this.state, required this.focused, required this.onOpen});
 
   final LessonQueueLoaded state;
+  final bool focused;
   final ValueChanged<LessonId> onOpen;
 
   @override
@@ -30,7 +31,14 @@ class QueueList extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.px8),
       itemBuilder: (context, index) {
         final row = rows[index];
-        return _QueueCard(row: row, selected: row.lesson.id == state.selectedId, onTap: () => onOpen(row.lesson.id));
+        final selected = row.lesson.id == state.selectedId;
+        return _QueueCard(
+          row: row,
+          selected: selected,
+          // Lista nema okvir kao tabela, pa prsten dobija izabrana kartica. Strelice je pomeraju, Enter je otvara.
+          ringed: focused && selected,
+          onTap: () => onOpen(row.lesson.id),
+        );
       },
     );
   }
@@ -38,10 +46,11 @@ class QueueList extends StatelessWidget {
 
 // Figma: Panel/InboxRow. Ime i stanje, dva reda poruke, pa oglas i termin.
 class _QueueCard extends StatelessWidget {
-  const _QueueCard({required this.row, required this.selected, required this.onTap});
+  const _QueueCard({required this.row, required this.selected, required this.ringed, required this.onTap});
 
   final QueueRow row;
   final bool selected;
+  final bool ringed;
   final VoidCallback onTap;
 
   @override
@@ -53,7 +62,9 @@ class _QueueCard extends StatelessWidget {
       color: selected ? colors.primaryContainer : colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: const BorderRadius.all(Radius.circular(AppRadius.lg)),
-        side: BorderSide(color: AppExtraColors.of(context).border),
+        side: ringed
+            ? const BorderSide(color: AppColors.ring, width: 2)
+            : BorderSide(color: AppExtraColors.of(context).border),
       ),
       clipBehavior: Clip.antiAlias,
       // InkWell može da dobije fokus i sam pokreće onTap na Enter i razmak, pa Tab + Enter otvara detalj.

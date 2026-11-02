@@ -5,6 +5,8 @@ import 'package:backoffice/data/fake_lesson_repository.dart';
 import 'package:backoffice/data/fake_verification_repository.dart';
 import 'package:backoffice/lessons/queue_table.dart';
 import 'package:backoffice/router.dart';
+import 'package:backoffice/text/domain_errors.dart';
+import 'package:backoffice/verification/verification_table.dart';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +18,8 @@ import 'package:ui/ui.dart';
 import 'helpers.dart';
 
 void main() {
-  Future<void> pumpApp(WidgetTester tester) async {
+  // Profesor otvara Časove, administrator Verifikaciju.
+  Future<void> pumpApp(WidgetTester tester, {User user = milica}) async {
     useDesktopSize(tester);
     final now = DateTime.now();
     final failSwitch = FailSwitch();
@@ -25,24 +28,29 @@ void main() {
         failSwitch: failSwitch,
         lessons: FakeLessonRepository(demoLessons(now), failSwitch, delay: Duration.zero),
         verifications: FakeVerificationRepository(demoProfessors(now), failSwitch, delay: Duration.zero),
-        router: createRouter(ValueNotifier<User>(milica)),
+        router: createRouter(ValueNotifier<User>(user)),
       ),
     );
     await tester.pumpAndSettle();
   }
 
   Finder inTable(String text) => find.descendant(of: find.byType(QueueTable), matching: find.text(text));
+  Finder inProfiles(String text) => find.descendant(of: find.byType(VerificationTable), matching: find.text(text));
 
   // Redosled redova zavisi od današnjeg datuma, pa ga testovi čitaju iz Bloca umesto da ga pogađaju.
   LessonQueueLoaded queueState(WidgetTester tester) =>
       tester.element(find.byType(QueueTable)).read<LessonQueueBloc>().state as LessonQueueLoaded;
+  VerificationQueueLoaded profilesState(WidgetTester tester) =>
+      tester.element(find.byType(VerificationTable)).read<VerificationQueueBloc>().state as VerificationQueueLoaded;
 
-  Color tableBorderColor(WidgetTester tester) {
+  Color borderColorOf(WidgetTester tester, Type table) {
     final box = tester.widget<DecoratedBox>(
-      find.descendant(of: find.byType(QueueTable), matching: find.byType(DecoratedBox)).first,
+      find.descendant(of: find.byType(table), matching: find.byType(DecoratedBox)).first,
     );
     return ((box.decoration as BoxDecoration).border! as Border).top.color;
   }
+
+  Color tableBorderColor(WidgetTester tester) => borderColorOf(tester, QueueTable);
 
   Future<void> tapAndSettle(WidgetTester tester, Finder finder) async {
     await tester.tap(finder);
@@ -107,5 +115,96 @@ void main() {
 
     expect(inTable('Luka Ilić'), findsNothing);
     expect(queueState(tester).visibleRows.length, pendingBefore - 1);
+  });
+
+  // Stefanov čas je počeo pre sat vremena, pa ishod može da se upiše.
+  testWidgets('H marks a lesson that has started as held', (tester) async {
+    await pumpApp(tester);
+    await tapAndSettle(tester, find.text('Potvrđeni'));
+    await tapAndSettle(tester, inTable('Stefan Popović'));
+
+    await pressAndSettle(tester, LogicalKeyboardKey.keyH);
+
+    expect(inTable('Stefan Popović'), findsNothing);
+    await tapAndSettle(tester, find.text('Održani'));
+    expect(inTable('Stefan Popović'), findsOneWidget);
+  });
+
+  testWidgets('N marks a lesson that has started as a no-show', (tester) async {
+    await pumpApp(tester);
+    await tapAndSettle(tester, find.text('Potvrđeni'));
+    await tapAndSettle(tester, inTable('Stefan Popović'));
+
+    await pressAndSettle(tester, LogicalKeyboardKey.keyN);
+
+    expect(inTable('Stefan Popović'), findsNothing);
+    await tapAndSettle(tester, find.text('Arhiva'));
+    expect(inTable('Stefan Popović'), findsOneWidget);
+  });
+
+  testWidgets('H on a lesson that has not started shows the Serbian error and changes nothing', (tester) async {
+    await pumpApp(tester);
+    await tapAndSettle(tester, find.text('Potvrđeni'));
+    await tapAndSettle(tester, inTable('Ana Marković'));
+
+    await pressAndSettle(tester, LogicalKeyboardKey.keyH);
+
+    expect(find.text(const LessonNotStarted().message), findsOneWidget);
+    expect(inTable('Ana Marković'), findsOneWidget);
+  });
+
+  group('Verifikacija', () {
+    testWidgets('right after loading the table has the focus ring, and the arrows move the selection', (tester) async {
+      await pumpApp(tester, user: admin);
+      final profiles = profilesState(tester).profiles;
+
+      expect(borderColorOf(tester, VerificationTable), AppColors.ring);
+      expect(profilesState(tester).selectedId, profiles[0].id);
+
+      await pressAndSettle(tester, LogicalKeyboardKey.arrowDown);
+      expect(profilesState(tester).selectedId, profiles[1].id);
+
+      await pressAndSettle(tester, LogicalKeyboardKey.arrowUp);
+      expect(profilesState(tester).selectedId, profiles[0].id);
+    });
+
+    testWidgets('V verifies only the selected professor', (tester) async {
+      await pumpApp(tester, user: admin);
+      final profiles = profilesState(tester).profiles;
+      await pressAndSettle(tester, LogicalKeyboardKey.arrowDown);
+
+      await pressAndSettle(tester, LogicalKeyboardKey.keyV);
+
+      expect(inProfiles(profiles[1].fullName), findsNothing);
+      expect(inProfiles(profiles[0].fullName), findsOneWidget);
+    });
+
+    testWidgets('O opens the reason dialog, and V and O typed in it do not reach the page', (tester) async {
+      await pumpApp(tester, user: admin);
+      final first = profilesState(tester).profiles[0];
+
+      await pressAndSettle(tester, LogicalKeyboardKey.keyO);
+      expect(find.text('Odbij: ${first.fullName}'), findsOneWidget);
+
+      // Fokus je u polju za razlog.
+      await pressAndSettle(tester, LogicalKeyboardKey.keyV);
+      await pressAndSettle(tester, LogicalKeyboardKey.keyO);
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tapAndSettle(tester, find.text('Odustani'));
+      expect(inProfiles(first.fullName), findsOneWidget);
+    });
+
+    testWidgets('after Odustani the arrows still move the selection', (tester) async {
+      await pumpApp(tester, user: admin);
+      final profiles = profilesState(tester).profiles;
+
+      await pressAndSettle(tester, LogicalKeyboardKey.keyO);
+      await tapAndSettle(tester, find.text('Odustani'));
+      await pressAndSettle(tester, LogicalKeyboardKey.arrowDown);
+
+      expect(profilesState(tester).selectedId, profiles[1].id);
+      expect(borderColorOf(tester, VerificationTable), AppColors.ring);
+    });
   });
 }

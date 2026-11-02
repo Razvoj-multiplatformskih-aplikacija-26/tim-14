@@ -9,9 +9,10 @@ import '../text/dates.dart';
 // Uzak prozor dobija kartice umesto tabele, sa istim profilima iz Bloca. Isto kao lista časova.
 // Klik ne bira profil sam, nego javlja roditelju, jer roditelj i bira profil i otvara detalj.
 class VerificationList extends StatelessWidget {
-  const VerificationList({super.key, required this.state, required this.onOpen});
+  const VerificationList({super.key, required this.state, required this.focused, required this.onOpen});
 
   final VerificationQueueLoaded state;
+  final bool focused;
   final ValueChanged<UserId> onOpen;
 
   @override
@@ -22,9 +23,12 @@ class VerificationList extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.px8),
       itemBuilder: (context, index) {
         final profile = profiles[index];
+        final selected = profile.id == state.selectedId;
         return _ProfileCard(
           profile: profile,
-          selected: profile.id == state.selectedId,
+          selected: selected,
+          // Lista nema okvir kao tabela, pa prsten dobija izabrana kartica. Strelice je pomeraju, Enter je otvara.
+          ringed: focused && selected,
           onTap: () => onOpen(profile.id),
         );
       },
@@ -34,10 +38,11 @@ class VerificationList extends StatelessWidget {
 
 // Ime i stanje, dva reda o profesoru, pa grad i kad je poslato.
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.profile, required this.selected, required this.onTap});
+  const _ProfileCard({required this.profile, required this.selected, required this.ringed, required this.onTap});
 
   final ProfessorProfile profile;
   final bool selected;
+  final bool ringed;
   final VoidCallback onTap;
 
   @override
@@ -49,7 +54,9 @@ class _ProfileCard extends StatelessWidget {
       color: selected ? colors.primaryContainer : colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: const BorderRadius.all(Radius.circular(AppRadius.lg)),
-        side: BorderSide(color: AppExtraColors.of(context).border),
+        side: ringed
+            ? const BorderSide(color: AppColors.ring, width: 2)
+            : BorderSide(color: AppExtraColors.of(context).border),
       ),
       clipBehavior: Clip.antiAlias,
       // InkWell može da dobije fokus i sam pokreće onTap na Enter i razmak, pa Tab + Enter otvara detalj.
