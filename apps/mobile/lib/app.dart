@@ -46,6 +46,8 @@ class _AppState extends State<App> {
             widget.me,
           )..add(MyLessonsRequested()),
         ),
+        // Profil profesora pravi svoj Bloc, pa mu use case dajemo ovde.
+        RepositoryProvider(create: (context) => GetProfessorPage(widget.professors, widget.lessons, widget.clock)),
         // Pravi se tek kad se prvi put otvori tab Profesori.
         BlocProvider(create: (context) => ProfessorsBloc(GetProfessors(widget.professors))..add(ProfessorsRequested())),
       ],

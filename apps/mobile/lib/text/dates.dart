@@ -22,3 +22,13 @@ String formatLessonTime(DateTime time) {
   final minute = local.minute.toString().padLeft(2, '0');
   return '${_days[local.weekday - 1]}, ${local.day}. ${_months[local.month - 1]}, $hour:$minute';
 }
+
+const _shortDays = ['pon', 'uto', 'sre', 'čet', 'pet', 'sub', 'ned'];
+
+// Kraće, za čipove sa terminima, npr. "čet 5. 11. 17:00".
+String formatSlotTime(DateTime time) {
+  final local = time.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${_shortDays[local.weekday - 1]} ${local.day}. ${local.month}. $hour:$minute';
+}
