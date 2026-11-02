@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'data/fail_switch.dart';
 import 'screens/lesson_detail_screen.dart';
 import 'screens/my_lessons_screen.dart';
+import 'screens/professor_page_screen.dart';
 import 'screens/professors_screen.dart';
 
 GoRouter createRouter(FailSwitch failSwitch) {
@@ -33,6 +34,13 @@ GoRouter createRouter(FailSwitch failSwitch) {
               GoRoute(
                 path: '/profesori',
                 builder: (context, state) => ProfessorsScreen(failSwitch: failSwitch),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) =>
+                        ProfessorPageScreen(professorId: UserId(state.pathParameters['id']!), failSwitch: failSwitch),
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:blocs/blocs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ui/ui.dart';
 
 import '../data/fail_switch.dart';
@@ -64,8 +65,10 @@ class ProfessorsScreen extends StatelessWidget {
                   for (final professor in state.professors)
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.px8),
-                      // Klik vodi na profil profesora, koji stiže u sledećem koraku.
-                      child: ProfessorCard(professor: professor),
+                      child: ProfessorCard(
+                        professor: professor,
+                        onTap: () => context.go('/profesori/${professor.profile.id.value}'),
+                      ),
                     ),
                 ],
               );
