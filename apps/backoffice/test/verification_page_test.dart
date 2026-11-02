@@ -10,6 +10,7 @@ import 'package:backoffice/verification/verification_list.dart';
 import 'package:backoffice/verification/verification_table.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:use_cases/use_cases.dart';
 
@@ -186,6 +187,23 @@ void main() {
       await tapAndSettle(tester, find.text('Nazad'));
       expect(find.byType(ProfileDetail), findsNothing);
       expect(inList('Jelena Marković'), findsOneWidget);
+    });
+
+    testWidgets('Enter opens the selected professor without Tab, and Esc goes back to the list', (tester) async {
+      useNarrowSize(tester);
+      await pumpApp(tester);
+      await tester.pumpAndSettle();
+
+      // Dragan je najstariji, pa je izabran čim se red učita.
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byType(VerificationList), findsNothing);
+      expect(inDetail('diploma-dragan-simic.pdf'), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileDetail), findsNothing);
+      expect(inList('Dragan Simić'), findsOneWidget);
     });
 
     testWidgets('Verifikuj in the detail goes back to the list without that professor', (tester) async {

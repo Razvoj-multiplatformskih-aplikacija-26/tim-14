@@ -6,7 +6,7 @@ import 'package:ui/ui.dart';
 
 import '../text/domain_errors.dart';
 
-// Dugme „Odbij uz razlog“ zove ovo, a kasnije i taster O. Dijalog samo skuplja razlog,
+// Dugme „Odbij uz razlog“ i taster O zovu ovo. Dijalog samo skuplja razlog,
 // a odluku šalje kao događaj Blocu, isto kao dugme Verifikuj.
 Future<void> rejectSelected(BuildContext context) async {
   // Bloc uzimamo pre await-a. Posle zatvaranja dijaloga context možda više nije na ekranu.

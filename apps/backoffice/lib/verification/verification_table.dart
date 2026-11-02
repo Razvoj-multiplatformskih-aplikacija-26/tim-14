@@ -11,10 +11,12 @@ import '../text/dates.dart';
 const _flex = (name: 4, city: 3, submitted: 3, status: 3);
 
 // Ista ideja kao tabela časova: lista naših redova umesto DataTable.
+// Tastaturu hvata strana oko tabele, a tabela samo crta da li je fokus na njoj.
 class VerificationTable extends StatelessWidget {
-  const VerificationTable({super.key, required this.state});
+  const VerificationTable({super.key, required this.state, required this.focused});
 
   final VerificationQueueLoaded state;
+  final bool focused;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,10 @@ class VerificationTable extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: radius,
-        border: Border.all(color: AppExtraColors.of(context).border),
+        // Vidljiv fokus: prsten u boji ring, kao kod dugmadi.
+        border: focused
+            ? Border.all(color: AppColors.ring, width: 2)
+            : Border.all(color: AppExtraColors.of(context).border),
       ),
       child: ClipRRect(
         borderRadius: radius,
@@ -97,6 +102,8 @@ class _ProfileRowTile extends StatelessWidget {
     return Material(
       color: selected ? colors.primaryContainer : Colors.transparent,
       child: InkWell(
+        // Red ne uzima fokus, pa je cela tabela jedan korak za Tab, a strelice biraju red unutar nje.
+        canRequestFocus: false,
         onTap: () => context.read<VerificationQueueBloc>().add(ProfileSelected(profile.id)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.px16, vertical: AppSpacing.px12),

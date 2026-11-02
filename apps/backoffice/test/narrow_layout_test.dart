@@ -7,10 +7,13 @@ import 'package:backoffice/lessons/lesson_detail.dart';
 import 'package:backoffice/lessons/queue_list.dart';
 import 'package:backoffice/lessons/queue_table.dart';
 import 'package:backoffice/router.dart';
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ui/ui.dart';
 
 import 'helpers.dart';
 
@@ -82,6 +85,40 @@ void main() {
 
     expect(inDetail('Teodora Đorđević'), findsOneWidget);
     expect(inDetail(teodora), findsOneWidget);
+  });
+
+  // Redosled kartica zavisi od današnjeg datuma, pa se ime izabranog čita iz Bloca.
+  String selectedName(WidgetTester tester) {
+    final state = tester.element(find.byType(QueueList)).read<LessonQueueBloc>().state as LessonQueueLoaded;
+    return studentName(state.selected!.lesson.studentId);
+  }
+
+  Color cardBorderColor(WidgetTester tester, String name) {
+    final card = tester.widget<Material>(find.ancestor(of: inList(name), matching: find.byType(Material)).first);
+    return (card.shape! as RoundedRectangleBorder).side.color;
+  }
+
+  testWidgets('right after loading the selected card has the focus ring', (tester) async {
+    await pumpApp(tester);
+
+    expect(cardBorderColor(tester, selectedName(tester)), AppColors.ring);
+  });
+
+  testWidgets('Enter opens the selected lesson without Tab, and Esc goes back to the list', (tester) async {
+    await pumpApp(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    final name = selectedName(tester);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.byType(QueueList), findsNothing);
+    expect(inDetail(name), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(LessonDetail), findsNothing);
+    expect(cardBorderColor(tester, name), AppColors.ring);
   });
 
   testWidgets('the selection stays when the window widens and narrows', (tester) async {
