@@ -2,6 +2,7 @@ import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ui/ui.dart';
 import 'package:use_cases/use_cases.dart';
 
@@ -169,8 +170,8 @@ class _ListingCard extends StatelessWidget {
                   for (final slot in slots)
                     ActionChip(
                       label: Text(formatSlotTime(slot.start)),
-                      // Forma za zahtev stiže u sledećem koraku.
-                      onPressed: () {},
+                      onPressed: () =>
+                          context.go('/profesori/${slot.professorId.value}/zahtev?termin=${slot.id.value}'),
                     ),
                 ],
               ),

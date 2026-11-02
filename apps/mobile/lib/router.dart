@@ -7,9 +7,14 @@ import 'screens/lesson_detail_screen.dart';
 import 'screens/my_lessons_screen.dart';
 import 'screens/professor_page_screen.dart';
 import 'screens/professors_screen.dart';
+import 'screens/request_form_screen.dart';
+
+// Navigator iznad tabova. Forma za zahtev se otvara na njemu, preko celog ekrana i bez donje navigacije.
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 GoRouter createRouter(FailSwitch failSwitch) {
   return GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: '/casovi',
     routes: [
       StatefulShellRoute.indexedStack(
@@ -39,6 +44,18 @@ GoRouter createRouter(FailSwitch failSwitch) {
                     path: ':id',
                     builder: (context, state) =>
                         ProfessorPageScreen(professorId: UserId(state.pathParameters['id']!), failSwitch: failSwitch),
+                    routes: [
+                      // Npr. /profesori/milica-jovanovic/zahtev?termin=s-l-srednja-0
+                      // Kad se forma zatvori, tab Profesori ostaje na profilu, a ne na ekranu uspeha.
+                      GoRoute(
+                        path: 'zahtev',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) => RequestFormScreen(
+                          professorId: UserId(state.pathParameters['id']!),
+                          slotId: SlotId(state.uri.queryParameters['termin'] ?? ''),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
