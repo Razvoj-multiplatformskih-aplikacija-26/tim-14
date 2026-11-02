@@ -16,16 +16,11 @@ class ProfessorCard extends StatelessWidget {
     final listings = professor.listings;
     final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
-    // Najniža cena među oglasima, npr. "od 1.800 din".
+    // Najnižu cenu računa ProfessorSummary, ovde je samo ispisujemo. Sa više oglasa piše "od".
+    final lowestPrice = professor.lowestPrice;
     String? priceText;
-    if (listings.isNotEmpty) {
-      var cheapest = listings.first;
-      for (final listing in listings) {
-        if (listing.price.dinars < cheapest.price.dinars) {
-          cheapest = listing;
-        }
-      }
-      priceText = listings.length > 1 ? 'od ${formatPrice(cheapest.price)}' : formatPrice(cheapest.price);
+    if (lowestPrice != null) {
+      priceText = listings.length > 1 ? 'od ${formatPrice(lowestPrice)}' : formatPrice(lowestPrice);
     }
 
     return Card(
