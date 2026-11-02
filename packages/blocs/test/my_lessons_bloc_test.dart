@@ -53,6 +53,25 @@ void main() {
     ],
   );
 
+  test('groups the lessons into upcoming, pending and past', () {
+    final cancelled = lessonAt(
+      now.subtract(const Duration(days: 2)),
+      id: 'cancelled',
+      status: Cancelled(by: student.id, at: now),
+    );
+    final state = MyLessonsLoaded([
+      LessonItem(lesson: held, action: LessonAction.none),
+      LessonItem(lesson: cancelled, action: LessonAction.none),
+      LessonItem(lesson: confirmed, action: LessonAction.cancel),
+      LessonItem(lesson: pending, action: LessonAction.withdraw),
+    ]);
+
+    expect(state.upcoming.map((item) => item.lesson), [confirmed]);
+    expect(state.pending.map((item) => item.lesson), [pending]);
+    // Najnoviji prošli prvi.
+    expect(state.past.map((item) => item.lesson), [cancelled, held]);
+  });
+
   blocTest<MyLessonsBloc, MyLessonsState>(
     'is empty when I have no lessons',
     setUp: () => repository = InMemoryLessonRepository(),
