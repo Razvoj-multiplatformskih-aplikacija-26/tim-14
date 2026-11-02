@@ -32,6 +32,7 @@ class RequestFormReady extends RequestFormState {
     required this.listing,
     required this.slot,
     this.message = '',
+    this.messageLength = 0,
     this.messageError,
     this.isSending = false,
     this.submitError,
@@ -42,6 +43,9 @@ class RequestFormReady extends RequestFormState {
   final Listing listing;
   final Slot slot;
   final String message;
+
+  // Broj znakova za brojač ispod polja, broji ga domen.
+  final int messageLength;
 
   // Greška u poruci dok se kuca, npr. preko 300 znakova.
   final DomainError? messageError;
@@ -56,7 +60,17 @@ class RequestFormReady extends RequestFormState {
   bool get canSend => message.trim().isNotEmpty && messageError == null && !isSending;
 
   @override
-  List<Object?> get props => [profile, listing, slot, message, messageError, isSending, submitError, networkError];
+  List<Object?> get props => [
+    profile,
+    listing,
+    slot,
+    message,
+    messageLength,
+    messageError,
+    isSending,
+    submitError,
+    networkError,
+  ];
 }
 
 class RequestFormSent extends RequestFormState {

@@ -80,6 +80,7 @@ void main() {
     expect: () => [
       isA<RequestFormReady>()
           .having((state) => state.messageError, 'messageError', const InvalidRequestMessage(301))
+          .having((state) => state.messageLength, 'messageLength', 301)
           .having((state) => state.canSend, 'canSend', false),
     ],
   );

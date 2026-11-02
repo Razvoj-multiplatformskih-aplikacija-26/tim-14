@@ -25,6 +25,11 @@ void main() {
       expect(RequestMessage.parse('${'a' * 299}👩‍👩‍👧').isSuccess, isTrue);
       expect(RequestMessage.parse('${'a' * 300}👍').errorOrNull, const InvalidRequestMessage(301));
     });
+
+    test('lengthOf counts like parse', () {
+      expect(RequestMessage.lengthOf('  Integrali  '), 9);
+      expect(RequestMessage.lengthOf('Zdravo 👩‍👩‍👧'), 8);
+    });
   });
 
   group('LessonNote', () {
