@@ -30,3 +30,26 @@ Glavni pojam sistema je čas; zahtev učenika, beleška sa časa i recenzija vez
 **5. Posao za osoblje.** Administrator radi sa redom zahteva za verifikaciju, u kome uporedo pregleda priloženu diplomu, LinkedIn profil i podatke koje je profesor uneo. Radi i sa pregledom svih profesora, oglasa i prijavljenih recenzija za moderaciju, što zahteva veći ekran.
 
 **6. Javni sadržaj.** Bez prijave su dostupni profili profesora i stranice oglasa sa opisom, cenom i recenzijama, kao i pregled oglasa po predmetu i gradu. Stranica oglasa, na primer „matematika za prijemni, Beograd", upravo je ono što ljudi traže preko pretraživača kada im treba profesor.
+
+## Pokretanje
+
+Potreban je Flutter (stable). Zavisnosti se preuzimaju jednom, iz korena repozitorijuma:
+
+    flutter pub get
+
+Mobilna aplikacija (Android emulator ili telefon):
+
+    cd apps/mobile
+    flutter run
+
+Backoffice:
+
+    cd apps/backoffice
+    flutter run -d windows
+
+Za Windows je potreban Visual Studio 2022 sa „Desktop development with C++“. Bez njega backoffice može da se pokrene sa `-d chrome`.
+
+Testovi se pokreću iz foldera paketa, sa `dart test` u `domain`, `use_cases` i `blocs`, odnosno sa `flutter test` u `ui` i u obe aplikacije.
+
+Aplikacije zasad koriste demo podatke, pa nije potrebno ništa dodatno podešavati.
+
