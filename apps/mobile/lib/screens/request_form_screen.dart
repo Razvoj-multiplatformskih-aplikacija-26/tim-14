@@ -94,14 +94,6 @@ class _Form extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.px16),
       children: [
-        if (errorText != null) ...[
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.px12),
-            decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(AppRadius.md)),
-            child: Text(errorText, style: AppTextStyles.bodySm.copyWith(color: scheme.onErrorContainer)),
-          ),
-          const SizedBox(height: AppSpacing.px16),
-        ],
         Card(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.px16),
@@ -152,6 +144,16 @@ class _Form extends StatelessWidget {
             ),
           ),
         ),
+        // Greška je ispod polja, ne iznad kartice. Da je iznad, polje bi se pomerilo u listi,
+        // Flutter bi napravio novo prazno polje, a Bloc bi i dalje pamtio stari tekst.
+        if (errorText != null) ...[
+          const SizedBox(height: AppSpacing.px16),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.px12),
+            decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(AppRadius.md)),
+            child: Text(errorText, style: AppTextStyles.bodySm.copyWith(color: scheme.onErrorContainer)),
+          ),
+        ],
         const SizedBox(height: AppSpacing.px16),
         FilledButton(
           // Dugme je sivo dok poruka nije dobra ili dok se šalje.

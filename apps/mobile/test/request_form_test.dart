@@ -88,5 +88,7 @@ void main() {
     await send(tester, 'Četvrti zahtev');
 
     expect(find.textContaining('Već imaš 3 zahteva na čekanju'), findsOneWidget);
+    // Posle greške tekst ostaje u polju, isti kao u brojaču.
+    expect(find.widgetWithText(TextField, 'Četvrti zahtev'), findsOneWidget);
   });
 }
