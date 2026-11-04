@@ -1,4 +1,4 @@
-﻿import 'package:domain/domain.dart';
+import 'package:domain/domain.dart';
 import 'package:use_cases/use_cases.dart';
 
 import 'fail_switch.dart';

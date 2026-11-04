@@ -155,6 +155,7 @@ class _Form extends StatelessWidget {
             alignLabelWithHint: true,
             border: const OutlineInputBorder(),
             errorText: state.messageError?.message,
+            errorMaxLines: 2,
             // Brojač je crven kad domen kaže da poruka nije dobra.
             counter: Text(
               '${state.messageLength}/${RequestMessage.maxLength}',
