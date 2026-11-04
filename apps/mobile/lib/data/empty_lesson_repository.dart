@@ -1,7 +1,7 @@
 import 'package:domain/domain.dart';
 import 'package:use_cases/use_cases.dart';
 
-// Za odbranu: u main.dart se FakeLessonRepository zameni ovim i vidi se prazan ekran.
+// Za odbranu: u main.dart se showEmpty postavi na true i vidi se prazan ekran.
 class EmptyLessonRepository implements LessonRepository {
   const EmptyLessonRepository({this.delay = const Duration(milliseconds: 800)});
 
