@@ -107,14 +107,14 @@ class _LessonList extends StatelessWidget {
     // Grupe pravi stanje iz Bloc-a, ekran ih samo crta.
     final upcoming = state.upcoming;
     final pending = state.pending;
-    final past = state.past;
+    final history = state.history;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.px16),
       children: [
         if (upcoming.isNotEmpty) ..._section(context, 'Predstojeći', upcoming),
         if (pending.isNotEmpty) ..._section(context, 'Na čekanju', pending),
-        if (past.isNotEmpty) ..._section(context, 'Prošli', past),
+        if (history.isNotEmpty) ..._section(context, 'Istorija', history),
       ],
     );
   }

@@ -53,13 +53,14 @@ class MyLessonsLoaded extends MyLessonsState {
   // Greška poslednje akcije, ekran je prikaže kao SnackBar.
   final DomainError? actionError;
 
-  // Grupe za ekran: potvrđeni su predstojeći, na čekanju čekaju profesora, ostalo je prošlo.
+  // Grupe za ekran: potvrđeni su predstojeći, na čekanju čekaju profesora, ostalo je istorija.
+  // Grupiše se po stanju, ne po vremenu: otkazan čas za tri dana je završen, pa je u istoriji.
   List<LessonItem> get upcoming => items.where((item) => item.lesson.status is Confirmed).toList();
 
   List<LessonItem> get pending => items.where((item) => item.lesson.status is Pending).toList();
 
-  // Prošli su najnoviji prvi.
-  List<LessonItem> get past => items
+  // U istoriji su najnoviji prvi.
+  List<LessonItem> get history => items
       .where((item) => item.lesson.status is! Confirmed && item.lesson.status is! Pending)
       .toList()
       .reversed
