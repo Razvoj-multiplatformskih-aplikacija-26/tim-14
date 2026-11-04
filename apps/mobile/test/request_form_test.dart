@@ -72,6 +72,19 @@ void main() {
     expect(button.onPressed, isNull);
   });
 
+  testWidgets('Simuliraj grešku in the form makes the next send fail', (tester) async {
+    await openForm(tester);
+
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Simuliraj grešku'));
+    await tester.pumpAndSettle();
+    await send(tester, 'Treba mi pomoć oko integrala.');
+
+    expect(find.text('Zahtev nije poslat, proveri mrežu i pokušaj ponovo.'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Treba mi pomoć oko integrala.'), findsOneWidget);
+  });
+
   testWidgets('a fourth pending request shows the rule error', (tester) async {
     await openForm(tester);
     await send(tester, 'Prvi novi zahtev');
