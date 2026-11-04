@@ -95,7 +95,9 @@ Listing _listing(ListingId id, UserId professor, Subject subject, Level level, C
 );
 
 // Termini su oni na kojima su već časovi, plus po tri nova slobodna za svaki oglas.
-// Novi su 2 do 7 dana od danas, jer zahtev mora biti bar 24 sata unapred.
+// Novi su bar 2 dana od danas, jer zahtev mora biti bar 24 sata unapred.
+// Svaki oglas počinje dan kasnije od prethodnog. Milica ima dva oglasa, a oni dele jedan kalendar,
+// pa njeni termini ne smeju da se preklapaju (proverava test demo_data_test.dart).
 List<Slot> demoSlots(DateTime now) {
   final slots = <Slot>[];
 
@@ -111,8 +113,9 @@ List<Slot> demoSlots(DateTime now) {
     );
   }
 
-  for (final listing in demoListings) {
-    final days = [2, 4, 6];
+  for (var n = 0; n < demoListings.length; n++) {
+    final listing = demoListings[n];
+    final days = [2 + n, 4 + n, 6 + n];
     final hours = [10, 14, 18];
     for (var i = 0; i < days.length; i++) {
       slots.add(
