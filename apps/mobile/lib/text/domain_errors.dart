@@ -11,7 +11,7 @@ extension DomainErrorText on DomainError {
     TooManyPendingRequests() =>
       'Već imaš $maxPendingRequests zahteva na čekanju. Povuci neki pre nego što pošalješ novi.',
     TooSoonToRequest() => 'Termin mora biti bar ${requestNotice.inHours} sata unapred.',
-    AlreadyRequested() => 'Već si poslao zahtev za ovaj termin.',
+    AlreadyRequested() => 'Zahtev za ovaj termin je već poslat.',
     SlotTaken() => 'Ovaj termin je u međuvremenu zauzet.',
     CancellationTooLate() => 'Čas može da se otkaže najkasnije ${cancellationNotice.inHours} sata pre početka.',
     LessonStarted() => 'Čas je već počeo.',

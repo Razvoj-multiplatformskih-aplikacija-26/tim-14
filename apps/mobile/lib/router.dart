@@ -53,6 +53,7 @@ GoRouter createRouter(FailSwitch failSwitch) {
                         builder: (context, state) => RequestFormScreen(
                           professorId: UserId(state.pathParameters['id']!),
                           slotId: SlotId(state.uri.queryParameters['termin'] ?? ''),
+                          failSwitch: failSwitch,
                         ),
                       ),
                     ],

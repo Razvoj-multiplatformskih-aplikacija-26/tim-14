@@ -56,6 +56,8 @@ class _AppState extends State<App> {
         title: 'Časovi',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
+        // Android 12+ na kraju liste razvlači sadržaj. Ovde se to isključuje za sve liste u aplikaciji.
+        scrollBehavior: const MaterialScrollBehavior().copyWith(overscroll: false),
         routerConfig: _router,
       ),
     );

@@ -53,7 +53,7 @@ void main() {
     ],
   );
 
-  test('groups the lessons into upcoming, pending and past', () {
+  test('groups the lessons into upcoming, pending and history', () {
     final cancelled = lessonAt(
       now.subtract(const Duration(days: 2)),
       id: 'cancelled',
@@ -68,8 +68,8 @@ void main() {
 
     expect(state.upcoming.map((item) => item.lesson), [confirmed]);
     expect(state.pending.map((item) => item.lesson), [pending]);
-    // Najnoviji prošli prvi.
-    expect(state.past.map((item) => item.lesson), [cancelled, held]);
+    // U istoriji su najnoviji prvi.
+    expect(state.history.map((item) => item.lesson), [cancelled, held]);
   });
 
   blocTest<MyLessonsBloc, MyLessonsState>(

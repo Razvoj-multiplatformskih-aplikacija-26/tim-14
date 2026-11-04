@@ -126,7 +126,7 @@ class _LessonDetail extends StatelessWidget {
       case Rejected(:final at):
         return _StepRow(text: 'Profesor je odbio zahtev', time: at);
       case NoShow(:final at):
-        return _StepRow(text: 'Nisi došao na čas', time: at);
+        return _StepRow(text: 'Čas je označen kao neodržan', time: at);
     }
   }
 }

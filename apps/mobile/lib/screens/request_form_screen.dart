@@ -6,15 +6,17 @@ import 'package:go_router/go_router.dart';
 import 'package:ui/ui.dart';
 import 'package:use_cases/use_cases.dart';
 
+import '../data/fail_switch.dart';
 import '../text/catalog.dart';
 import '../text/dates.dart';
 import '../text/domain_errors.dart';
 
 class RequestFormScreen extends StatelessWidget {
-  const RequestFormScreen({super.key, required this.professorId, required this.slotId});
+  const RequestFormScreen({super.key, required this.professorId, required this.slotId, required this.failSwitch});
 
   final UserId professorId;
   final SlotId slotId;
+  final FailSwitch failSwitch;
 
   @override
   Widget build(BuildContext context) {
@@ -22,18 +24,34 @@ class RequestFormScreen extends StatelessWidget {
       create: (context) =>
           RequestFormBloc(context.read<GetProfessorPage>(), context.read<RequestLesson>(), professorId, slotId)
             ..add(RequestFormStarted()),
-      child: const _RequestFormView(),
+      child: _RequestFormView(failSwitch: failSwitch),
     );
   }
 }
 
 class _RequestFormView extends StatelessWidget {
-  const _RequestFormView();
+  const _RequestFormView({required this.failSwitch});
+
+  final FailSwitch failSwitch;
+
+  // Za razliku od listi, ovde se ništa ne učitava ponovo. Greška čeka klik na „Pošalji zahtev“.
+  void _simulateError(BuildContext context) {
+    failSwitch.failNext = true;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sledeći zahtev će vratiti grešku.')));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Zahtev za čas')),
+      appBar: AppBar(
+        title: const Text('Zahtev za čas'),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (_) => _simulateError(context),
+            itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
+          ),
+        ],
+      ),
       body: BlocConsumer<RequestFormBloc, RequestFormState>(
         // Kad je zahtev poslat, osvežimo Moje časove da se novi zahtev vidi kao "Na čekanju".
         listenWhen: (previous, current) => current is RequestFormSent,
@@ -94,14 +112,6 @@ class _Form extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.px16),
       children: [
-        if (errorText != null) ...[
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.px12),
-            decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(AppRadius.md)),
-            child: Text(errorText, style: AppTextStyles.bodySm.copyWith(color: scheme.onErrorContainer)),
-          ),
-          const SizedBox(height: AppSpacing.px16),
-        ],
         Card(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.px16),
@@ -145,6 +155,7 @@ class _Form extends StatelessWidget {
             alignLabelWithHint: true,
             border: const OutlineInputBorder(),
             errorText: state.messageError?.message,
+            errorMaxLines: 2,
             // Brojač je crven kad domen kaže da poruka nije dobra.
             counter: Text(
               '${state.messageLength}/${RequestMessage.maxLength}',
@@ -152,6 +163,16 @@ class _Form extends StatelessWidget {
             ),
           ),
         ),
+        // Greška je ispod polja, ne iznad kartice. Da je iznad, polje bi se pomerilo u listi,
+        // Flutter bi napravio novo prazno polje, a Bloc bi i dalje pamtio stari tekst.
+        if (errorText != null) ...[
+          const SizedBox(height: AppSpacing.px16),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.px12),
+            decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(AppRadius.md)),
+            child: Text(errorText, style: AppTextStyles.bodySm.copyWith(color: scheme.onErrorContainer)),
+          ),
+        ],
         const SizedBox(height: AppSpacing.px16),
         FilledButton(
           // Dugme je sivo dok poruka nije dobra ili dok se šalje.
