@@ -14,12 +14,28 @@ jobs:
       matrix:
         include:
           - package: domain
+            path: packages/domain
             command: dart test
           - package: ui
+            path: packages/ui
             command: flutter test
           - package: use_cases
+            path: packages/use_cases
             command: dart test
           - package: blocs
+            path: packages/blocs
+            command: dart test
+          - package: api_contract
+            path: packages/api_contract
+            command: dart test
+          - package: api_mapping
+            path: packages/api_mapping
+            command: dart test
+          - package: api_client
+            path: packages/api_client
+            command: dart test
+          - package: server
+            path: apps/server
             command: dart test
 
     steps:
@@ -37,10 +53,10 @@ jobs:
       # dart test exits 79 when there are no tests, so a package that has none
       # yet gets a warning instead of a red build.
       - name: Test ${{ matrix.package }}
-        working-directory: packages/${{ matrix.package }}
+        working-directory: ${{ matrix.path }}
         run: |
           if [ -z "$(find test -name '*_test.dart' -print -quit 2>/dev/null)" ]; then
-            echo "::warning::packages/${{ matrix.package }} has no tests yet"
+            echo "::warning::${{ matrix.path }} has no tests yet"
             exit 0
           fi
           ${{ matrix.command }}
