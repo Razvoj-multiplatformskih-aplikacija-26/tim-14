@@ -7,6 +7,8 @@ import 'package:relic/relic.dart' show IOAdapter, RelicServer;
 import 'package:server/server.dart';
 import 'package:test/test.dart';
 
+import 'support/unused.dart';
+
 const backoffice = 'http://localhost:8081';
 const stranger = 'http://evil.example';
 
@@ -18,7 +20,14 @@ Uri at(String path) => base.replace(path: path);
 void main() {
   setUpAll(() async {
     server = RelicServer(() => IOAdapter.bind(InternetAddress.loopbackIPv4, port: 0));
-    await server.mountAndStart(buildHandler(corsOrigins: const [backoffice]));
+    await server.mountAndStart(
+      buildHandler(
+        corsOrigins: const [backoffice],
+        lessons: UnusedLessons(),
+        verifications: UnusedVerifications(),
+        findUser: noUsers,
+      ),
+    );
     base = Uri.parse('http://localhost:${server.port}');
   });
 

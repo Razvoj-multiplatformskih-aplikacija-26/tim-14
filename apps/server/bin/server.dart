@@ -7,8 +7,21 @@ import 'package:server/server.dart';
 Future<void> main() async {
   final config = ServerConfig.fromEnvironment(serverEnvironment());
   final database = await Database.open(config.databaseUrl);
+  final seed = await seedIfEmpty(database, demoPassword: config.demoPassword, now: DateTime.now());
+  stdout.writeln(switch (seed) {
+    SeedOutcome.seeded => 'Seed: demo data written',
+    SeedOutcome.notEmpty => 'Seed: skipped, the database already has users',
+    SeedOutcome.noDemoPassword => 'Seed: skipped, DEMO_PASSWORD is not set',
+  });
   final server = RelicServer(() => IOAdapter.bind(InternetAddress(config.host), port: config.port));
-  await server.mountAndStart(buildHandler(corsOrigins: config.corsOrigins));
+  await server.mountAndStart(
+    buildHandler(
+      corsOrigins: config.corsOrigins,
+      lessons: PostgresLessons(database),
+      verifications: PostgresVerifications(database),
+      findUser: findUserIn(database),
+    ),
+  );
   stdout.writeln('Server on http://${config.host}:${config.port}');
   await _stopSignal();
   // The server first, so requests still running can finish their queries. Then the connections.
