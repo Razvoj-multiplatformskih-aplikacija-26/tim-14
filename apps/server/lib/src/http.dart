@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:api_contract/api_contract.dart';
-import 'package:relic/relic.dart';
+import 'package:domain/domain.dart' show DomainError, Result, Success;
+import 'package:relic/relic.dart' hide Result;
 import 'package:use_cases/use_cases.dart' show RepositoryException;
+
+import 'stand_ins.dart' show problemOf;
 
 final _problemMimeType = MimeType.parse(ProblemDto.mediaType);
 
@@ -12,6 +15,21 @@ Response json(int status, Object? body) =>
 
 Response problemResponse(ProblemDto problem) =>
     Response(problem.status, body: Body.fromString(jsonEncode(problem.toJson()), mimeType: _problemMimeType));
+
+/// A refusal by a domain rule, as a problem response. In Spring terms: what an `@ExceptionHandler` makes of an
+/// exception, except that here the rule returns its refusal as a value instead of throwing it.
+/// After Ilija's I3 this is `problemResponse(error.toProblem())`.
+Response problem(DomainError error) => problemResponse(problemOf(error));
+
+/// What a handler answers with the result of a use case: the value as JSON, or the refusal as a problem.
+/// [toJson] turns the value into JSON; [status] is for a success other than 200, such as 201 for a create.
+Response respond<T>(Result<T> result, Object? Function(T value) toJson, {int status = 200}) {
+  if (result is Success<T>) {
+    final value = result.value;
+    return json(status, toJson(value));
+  }
+  return problem(result.errorOrNull!);
+}
 
 Response badRequest(String title) =>
     problemResponse(ProblemDto(status: 400, code: ErrorCodes.badRequest, title: title));
@@ -71,6 +89,9 @@ const unsupportedMediaType = ProblemDto(
 );
 
 const payloadTooLarge = ProblemDto(status: 413, code: ErrorCodes.payloadTooLarge, title: 'Request body too large');
+
+/// 401 for a route that needs a caller and got none. The code becomes `ErrorCodes.signInRequired` once I2 adds it.
+const signInRequired = ProblemDto(status: 401, code: 'sign-in-required', title: 'Sign in first');
 
 const notFound = ProblemDto(status: 404, code: ErrorCodes.notFound, title: 'Not found');
 

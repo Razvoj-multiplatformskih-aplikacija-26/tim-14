@@ -158,6 +158,12 @@ LessonStatus _lessonStatusFromColumns(Map<String, dynamic> column) {
   };
 }
 
+/// The `rejection_cause` column's value, the same name the JSON uses.
+String rejectionCauseNameOf(RejectionCause cause) => switch (cause) {
+  RejectionCause.byProfessor => 'by_professor',
+  RejectionCause.slotTaken => 'slot_taken',
+};
+
 RejectionCause _causeFromName(String name) => switch (name) {
   'by_professor' => RejectionCause.byProfessor,
   'slot_taken' => RejectionCause.slotTaken,
@@ -185,10 +191,7 @@ Map<String, Object?> lessonStatusParameters(LessonStatus status) {
     at = status.at;
   } else if (status is Rejected) {
     at = status.at;
-    cause = switch (status.cause) {
-      RejectionCause.byProfessor => 'by_professor',
-      RejectionCause.slotTaken => 'slot_taken',
-    };
+    cause = rejectionCauseNameOf(status.cause);
   } else if (status is Cancelled) {
     at = status.at;
     cancelledBy = status.by.value;
