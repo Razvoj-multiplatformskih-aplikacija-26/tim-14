@@ -6,3 +6,5 @@ export 'src/passwords.dart';
 export 'src/postgres_lessons.dart';
 export 'src/postgres_professors.dart';
 export 'src/postgres_verifications.dart';
+export 'src/staff_handlers.dart';
+export 'src/stand_ins.dart';
