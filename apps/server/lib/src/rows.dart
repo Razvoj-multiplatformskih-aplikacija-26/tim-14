@@ -92,6 +92,38 @@ VerificationStatus _verificationFromColumns(Map<String, dynamic> column) {
   };
 }
 
+/// The writing side of [_verificationFromColumns]: the seven verification columns of a profile, as SQL
+/// parameters named after the columns. A column the state does not have is NULL.
+Map<String, Object?> verificationParameters(VerificationStatus status) {
+  DateTime? submittedAt;
+  String? diplomaFile;
+  String? linkedIn;
+  String? decidedBy;
+  DateTime? decidedAt;
+  String? reason;
+  if (status is AwaitingReview) {
+    submittedAt = status.submittedAt;
+    diplomaFile = status.diplomaFile;
+    linkedIn = status.linkedIn.value;
+  } else if (status is Verified) {
+    decidedBy = status.by.value;
+    decidedAt = status.at;
+  } else if (status is VerificationRejected) {
+    decidedBy = status.by.value;
+    decidedAt = status.at;
+    reason = status.reason.text;
+  }
+  return {
+    'verification': verificationNameOf(status),
+    'submitted_at': submittedAt,
+    'diploma_file': diplomaFile,
+    'linkedin_url': linkedIn,
+    'decided_by': decidedBy,
+    'decided_at': decidedAt,
+    'rejection_reason': reason,
+  };
+}
+
 const listingColumns = 'id, professor_id, subject, level, city, description, price_rsd, duration_minutes';
 
 Listing listingFromRow(ResultRow row) {

@@ -57,32 +57,10 @@ final class PostgresLessons implements LessonRepository {
     return LessonId(rows.single.single! as String);
   });
 
-  /// Inserts a new request. Both names are copied from `users` at this moment, a snapshot like the slot's time:
-  /// a later rename does not rewrite old lessons. (Until Ilija's I1 puts the names on `Lesson` itself.)
+  /// Inserts a new request (see [insertLessonRow]).
   @override
   Future<Result<Lesson>> create(Lesson lesson) => _database.run((db) async {
-    await db.execute(
-      Sql.named('''
-        INSERT INTO lessons (id, slot_id, listing_id, professor_id, professor_name, student_id, student_name,
-                             starts_at, duration_minutes, message, created_at,
-                             status, status_at, rejection_cause, cancelled_by, note)
-        VALUES (@id, @slot, @listing, @professor, (SELECT name FROM users WHERE id = @professor),
-                @student, (SELECT name FROM users WHERE id = @student),
-                @start:timestamptz, @duration, @message, @created_at:timestamptz,
-                @status, @status_at:timestamptz, @rejection_cause, @cancelled_by, @note)'''),
-      parameters: {
-        'id': lesson.id.value,
-        'slot': lesson.slotId.value,
-        'listing': lesson.listingId.value,
-        'professor': lesson.professorId.value,
-        'student': lesson.studentId.value,
-        'start': lesson.start,
-        'duration': lesson.duration.minutes,
-        'message': lesson.message.text,
-        'created_at': lesson.createdAt,
-        ...lessonStatusParameters(lesson.status),
-      },
-    );
+    await insertLessonRow(db, lesson);
     return Success(lesson);
   });
 
@@ -143,3 +121,31 @@ final class PostgresLessons implements LessonRepository {
     return changed.affectedRows == 1;
   }
 }
+
+/// Inserts one lesson row on [db], which is a pool connection or an open transaction. `create` uses it for a new
+/// request, and the seed uses it inside its one transaction.
+///
+/// Both names are copied from `users` at this moment, a snapshot like the slot's time: a later rename does not
+/// rewrite old lessons. (Until Ilija's I1 puts the names on `Lesson` itself.)
+Future<void> insertLessonRow(Session db, Lesson lesson) => db.execute(
+  Sql.named('''
+      INSERT INTO lessons (id, slot_id, listing_id, professor_id, professor_name, student_id, student_name,
+                           starts_at, duration_minutes, message, created_at,
+                           status, status_at, rejection_cause, cancelled_by, note)
+      VALUES (@id, @slot, @listing, @professor, (SELECT name FROM users WHERE id = @professor),
+              @student, (SELECT name FROM users WHERE id = @student),
+              @start:timestamptz, @duration, @message, @created_at:timestamptz,
+              @status, @status_at:timestamptz, @rejection_cause, @cancelled_by, @note)'''),
+  parameters: {
+    'id': lesson.id.value,
+    'slot': lesson.slotId.value,
+    'listing': lesson.listingId.value,
+    'professor': lesson.professorId.value,
+    'student': lesson.studentId.value,
+    'start': lesson.start,
+    'duration': lesson.duration.minutes,
+    'message': lesson.message.text,
+    'created_at': lesson.createdAt,
+    ...lessonStatusParameters(lesson.status),
+  },
+);
