@@ -6,11 +6,14 @@ import 'package:server/server.dart';
 
 Future<void> main() async {
   final config = ServerConfig.fromEnvironment(serverEnvironment());
+  final database = await Database.open(config.databaseUrl);
   final server = RelicServer(() => IOAdapter.bind(InternetAddress(config.host), port: config.port));
   await server.mountAndStart(buildHandler(corsOrigins: config.corsOrigins));
   stdout.writeln('Server on http://${config.host}:${config.port}');
   await _stopSignal();
+  // The server first, so requests still running can finish their queries. Then the connections.
   await server.close();
+  await database.close();
   stdout.writeln('Server stopped');
 }
 

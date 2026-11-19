@@ -1,0 +1,6 @@
+tags:
+  # Needs Postgres: `docker compose up -d db` from the repository root. Skip with `dart test -x db`.
+  db:
+
+# Every db test file drops and recreates the same casovi_test, so test files run one at a time.
+concurrency: 1

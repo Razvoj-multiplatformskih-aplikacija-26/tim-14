@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:api_contract/api_contract.dart';
 import 'package:relic/relic.dart';
+import 'package:use_cases/use_cases.dart' show RepositoryException;
 
 final _problemMimeType = MimeType.parse(ProblemDto.mediaType);
 
@@ -41,6 +42,9 @@ Middleware handleErrors() =>
         return problemResponse(unsupportedMediaType);
       } on MaxBodySizeExceeded {
         return problemResponse(payloadTooLarge);
+      } on RepositoryException catch (error) {
+        stderr.writeln('${request.method} ${request.url.path}: ${error.message}: ${error.cause}');
+        return problemResponse(serviceUnavailable);
       } catch (error, stackTrace) {
         stderr.writeln('${request.method} ${request.url.path}: $error\n$stackTrace');
         return problemResponse(serverError);
@@ -56,3 +60,9 @@ const unsupportedMediaType = ProblemDto(
 const payloadTooLarge = ProblemDto(status: 413, code: ErrorCodes.payloadTooLarge, title: 'Request body too large');
 
 const serverError = ProblemDto(status: 500, code: ErrorCodes.serverError, title: 'Server error');
+
+const serviceUnavailable = ProblemDto(
+  status: 503,
+  code: ErrorCodes.serviceUnavailable,
+  title: 'Service temporarily unavailable',
+);
