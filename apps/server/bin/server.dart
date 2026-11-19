@@ -1,7 +1,29 @@
+import 'dart:async';
 import 'dart:io';
 
-/// Placeholder entry point. D4 replaces it with the real startup: open the
-/// database pool, run the seed, mount the router and start listening.
-void main() {
-  stdout.writeln('Server skeleton: nothing to serve yet.');
+import 'package:relic/relic.dart' show IOAdapter, RelicServer;
+import 'package:server/server.dart';
+
+Future<void> main() async {
+  final config = ServerConfig.fromEnvironment(serverEnvironment());
+  final server = RelicServer(() => IOAdapter.bind(InternetAddress(config.host), port: config.port));
+  await server.mountAndStart(buildHandler(corsOrigins: config.corsOrigins));
+  stdout.writeln('Server on http://${config.host}:${config.port}');
+  await _stopSignal();
+  await server.close();
+  stdout.writeln('Server stopped');
+}
+
+/// Ctrl-C locally, SIGTERM from `docker compose stop`. In the container this process is PID 1, and Linux
+/// gives PID 1 no default signal handlers, so without this the container ignores SIGTERM until Docker kills it.
+Future<void> _stopSignal() async {
+  final stop = Completer<void>();
+  final subscriptions = [
+    for (final signal in [ProcessSignal.sigint, if (!Platform.isWindows) ProcessSignal.sigterm])
+      signal.watch().listen((_) => stop.isCompleted ? null : stop.complete()),
+  ];
+  await stop.future;
+  for (final subscription in subscriptions) {
+    await subscription.cancel();
+  }
 }
