@@ -11,4 +11,5 @@ export 'src/tokens/app_text_styles.dart';
 export 'src/widgets/app_badge.dart';
 export 'src/widgets/avatar.dart';
 export 'src/widgets/lesson_status_badge.dart';
+export 'src/widgets/login_screen.dart';
 export 'src/widgets/verification_badge.dart';

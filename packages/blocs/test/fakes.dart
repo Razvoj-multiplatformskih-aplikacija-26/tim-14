@@ -9,6 +9,9 @@ const student = User(id: UserId('ana'), name: 'Ana', role: Role.student);
 const professor = User(id: UserId('milica'), name: 'Milica', role: Role.professor);
 const admin = User(id: UserId('jovana'), name: 'Jovana', role: Role.admin);
 
+// Pravilo backoffice-a za testove sesije. Pravo pravilo (AccessPolicy.canUseBackoffice) daje aplikacija.
+bool backoffice(User user) => user.role != Role.student;
+
 final message = RequestMessage.parse('Treba mi pomoć oko integrala.').valueOrNull!;
 
 final linkedIn = LinkedInUrl.parse('https://www.linkedin.com/in/jelena-petrovic').valueOrNull!;
@@ -238,4 +241,55 @@ final class InMemoryProfessorRepository implements ProfessorRepository {
     _check();
     return slots.where((slot) => slot.id == id).firstOrNull;
   }
+}
+
+// Sesija kao na serveru: login -> (lozinka, korisnik). expire() glumi server koji je odbio istekao token.
+final class InMemorySessionRepository implements SessionRepository {
+  InMemorySessionRepository(this.accounts, {this.signedIn});
+
+  final Map<String, (String, User)> accounts;
+  User? signedIn;
+  bool fail = false;
+  int logInCalls = 0;
+  int logOutCalls = 0;
+  final _expirations = StreamController<void>.broadcast();
+
+  // Ako je postavljen, logIn čeka dok ga test ne pusti.
+  Completer<void>? gate;
+
+  void expire() => _expirations.add(null);
+
+  void _check() {
+    if (fail) {
+      throw const RepositoryException('Nema veze sa serverom', failure: RepositoryFailure.unreachable);
+    }
+  }
+
+  @override
+  Future<User?> logIn({required String login, required String password}) async {
+    logInCalls++;
+    await gate?.future;
+    _check();
+    final account = accounts[login];
+    if (account == null || account.$1 != password) {
+      return null;
+    }
+    return signedIn = account.$2;
+  }
+
+  @override
+  Future<User?> current() async {
+    _check();
+    return signedIn;
+  }
+
+  @override
+  Future<void> logOut() async {
+    logOutCalls++;
+    _check();
+    signedIn = null;
+  }
+
+  @override
+  Stream<void> get expirations => _expirations.stream;
 }
