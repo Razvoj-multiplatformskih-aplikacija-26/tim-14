@@ -5,11 +5,15 @@ import 'package:backoffice/data/fail_switch.dart';
 import 'package:backoffice/data/fake_lesson_repository.dart';
 import 'package:backoffice/data/fake_verification_repository.dart';
 import 'package:backoffice/lessons/lesson_detail.dart';
+import 'package:backoffice/lessons/lesson_queue_page.dart';
 import 'package:backoffice/lessons/queue_table.dart';
 import 'package:backoffice/router.dart';
 import 'package:backoffice/text/domain_errors.dart';
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:use_cases/use_cases.dart';
 
@@ -131,5 +135,73 @@ void main() {
 
     expect(find.text('Još nema zahteva za časove.'), findsOneWidget);
     expect(find.byType(QueueTable), findsNothing);
+  });
+
+  LessonQueueLoaded queueState(WidgetTester tester) =>
+      tester.element(find.byType(LessonQueuePage)).read<LessonQueueBloc>().state as LessonQueueLoaded;
+
+  const unavailable = 'Podaci trenutno nisu dostupni. Pokušaj ponovo.';
+
+  testWidgets('a request the student withdrew meanwhile: Potvrdi says so and the row leaves Na čekanju', (
+    tester,
+  ) async {
+    final lessons = FakeLessonRepository(demoLessons(DateTime.now()), failSwitch, delay: Duration.zero);
+    await pumpApp(tester, lessons: lessons);
+    await tester.pumpAndSettle();
+    final stale = queueState(tester).selected!.lesson;
+
+    // Drugi klijent: učenik povlači zahtev, a profesor i dalje gleda staru listu.
+    final withdrawn = stale.copyWith(
+      status: Cancelled(by: stale.studentId, at: DateTime.now().toUtc()),
+    );
+    await lessons.save(withdrawn, from: const Pending());
+
+    await tapAndSettle(tester, find.text('Potvrdi'));
+
+    expect(find.text('Čas je u međuvremenu promenjen. Lista je osvežena.'), findsOneWidget);
+    // Lista je tiho osvežena: tabela je i dalje tu, a povučen zahtev više nije među zahtevima na čekanju.
+    expect(find.byType(QueueTable), findsOneWidget);
+    expect(queueState(tester).visibleRows.map((row) => row.lesson.id), isNot(contains(stale.id)));
+  });
+
+  testWidgets('a failed action keeps the table and shows the failure text', (tester) async {
+    await pumpApp(tester);
+    await tester.pumpAndSettle();
+    failSwitch.failNext = true;
+
+    await tapAndSettle(tester, find.text('Potvrdi'));
+
+    expect(find.text(unavailable), findsOneWidget);
+    expect(find.text('Časovi nisu učitani.'), findsNothing);
+    expect(inTable('Ana Marković'), findsOneWidget);
+  });
+
+  testWidgets('Osveži reloads in place: even a failed reload keeps the table', (tester) async {
+    await pumpApp(tester);
+    await tester.pumpAndSettle();
+    failSwitch.failNext = true;
+
+    await tapAndSettle(tester, find.byTooltip('Osveži'));
+
+    // Osvežavanje je stiglo do repozitorijuma (potrošilo je grešku), a tabela je ostala.
+    expect(failSwitch.failNext, isFalse);
+    expect(find.text(unavailable), findsOneWidget);
+    expect(inTable('Ana Marković'), findsOneWidget);
+  });
+
+  testWidgets('Ctrl+R and Cmd+R refresh like the button', (tester) async {
+    await pumpApp(tester);
+    await tester.pumpAndSettle();
+
+    for (final modifier in [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.metaLeft]) {
+      failSwitch.failNext = true;
+      await tester.sendKeyDownEvent(modifier);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+      await tester.sendKeyUpEvent(modifier);
+      await tester.pumpAndSettle();
+
+      expect(failSwitch.failNext, isFalse, reason: '$modifier+R did not reach the repository');
+    }
+    expect(inTable('Ana Marković'), findsOneWidget);
   });
 }

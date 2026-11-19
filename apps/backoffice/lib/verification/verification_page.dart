@@ -4,52 +4,58 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ui/ui.dart';
+import 'package:use_cases/use_cases.dart';
 
-import '../text/domain_errors.dart';
+import '../text/failures.dart';
 import '../widgets/centered_message.dart';
+import '../widgets/page_header.dart';
 import 'profile_detail.dart';
 import 'reject_dialog.dart';
 import 'verification_list.dart';
 import 'verification_table.dart';
 
 // Isti raspored kao Časovi: ekran samo crta stanje Bloca i šalje mu događaje.
-class VerificationPage extends StatelessWidget {
+class VerificationPage extends StatefulWidget {
   const VerificationPage({super.key});
 
   @override
+  State<VerificationPage> createState() => _VerificationPageState();
+}
+
+class _VerificationPageState extends State<VerificationPage> {
+  // Ulazak u deo tiho osveži red. Objašnjenje je u LessonQueuePage.
+  @override
+  void initState() {
+    super.initState();
+    context.read<VerificationQueueBloc>().add(VerificationRefreshed());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.px32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: AppSpacing.px24,
-        children: [
-          Text('Verifikacija', style: Theme.of(context).textTheme.headlineMedium),
-          Expanded(
-            child: BlocConsumer<VerificationQueueBloc, VerificationQueueState>(
-              listener: _showActionError,
-              // Stanje je sealed, pa kompajler traži granu za svako.
-              builder: (context, state) => switch (state) {
-                VerificationQueueInitial() ||
-                VerificationQueueLoading() => const Center(child: CircularProgressIndicator()),
-                final VerificationQueueFailure failure => _FailureView(message: failure.message),
-                VerificationQueueEmpty() => const _EmptyView(),
-                final VerificationQueueLoaded loaded => _LoadedView(state: loaded),
-              },
-            ),
-          ),
-        ],
+    final bloc = context.read<VerificationQueueBloc>();
+    return PageHeader(
+      title: 'Verifikacija',
+      onRefresh: () => bloc.add(VerificationRefreshed()),
+      child: BlocConsumer<VerificationQueueBloc, VerificationQueueState>(
+        listener: _showNotice,
+        // Stanje je sealed, pa kompajler traži granu za svako.
+        builder: (context, state) => switch (state) {
+          VerificationQueueInitial() || VerificationQueueLoading() => const Center(child: CircularProgressIndicator()),
+          final VerificationQueueFailure failed => _FailureView(failure: failed.failure),
+          VerificationQueueEmpty() => const _EmptyView(),
+          final VerificationQueueLoaded loaded => _LoadedView(state: loaded),
+        },
       ),
     );
   }
 
-  // Bloc pre svake odluke obriše staru grešku, pa se SnackBar pokaže jednom po grešci.
-  void _showActionError(BuildContext context, VerificationQueueState state) {
-    final error = state is VerificationQueueLoaded ? state.actionError : null;
-    if (error == null) return;
+  // Bloc pre svake odluke obriše stari notice, pa se SnackBar pokaže jednom po odluci.
+  void _showNotice(BuildContext context, VerificationQueueState state) {
+    final notice = state is VerificationQueueLoaded ? state.notice : null;
+    if (notice == null) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(error.message)));
+      ..showSnackBar(SnackBar(content: Text(notice.message)));
   }
 }
 
@@ -194,16 +200,16 @@ class _NarrowView extends StatelessWidget {
 }
 
 class _FailureView extends StatelessWidget {
-  const _FailureView({required this.message});
+  const _FailureView({required this.failure});
 
-  final String message;
+  final RepositoryFailure failure;
 
   @override
   Widget build(BuildContext context) {
     return CenteredMessage(
       icon: Icons.cloud_off_outlined,
       title: 'Red za verifikaciju nije učitan.',
-      text: message,
+      text: failure.message,
       action: FilledButton(
         onPressed: () => context.read<VerificationQueueBloc>().add(VerificationRetried()),
         child: const Text('Pokušaj ponovo'),

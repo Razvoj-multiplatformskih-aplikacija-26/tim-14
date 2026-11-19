@@ -10,6 +10,9 @@ class QueueRequested extends LessonQueueEvent {}
 // Profesor je kliknuo "Pokušaj ponovo" posle greške.
 class QueueRetried extends LessonQueueEvent {}
 
+// Dugme Osveži, Ctrl+R / Cmd+R ili ponovni ulazak u deo. Lista ostaje na ekranu dok stižu novi podaci.
+class QueueRefreshed extends LessonQueueEvent {}
+
 class TabChanged extends LessonQueueEvent {
   TabChanged(this.tab);
 

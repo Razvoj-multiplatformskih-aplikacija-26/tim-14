@@ -7,10 +7,13 @@ import 'package:backoffice/router.dart';
 import 'package:backoffice/text/domain_errors.dart';
 import 'package:backoffice/verification/profile_detail.dart';
 import 'package:backoffice/verification/verification_list.dart';
+import 'package:backoffice/verification/verification_page.dart';
 import 'package:backoffice/verification/verification_table.dart';
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:use_cases/use_cases.dart';
 
@@ -148,6 +151,46 @@ void main() {
 
       await tapAndSettle(tester, find.text('Pokušaj ponovo'));
 
+      expect(find.text('Red za verifikaciju nije učitan.'), findsNothing);
+      expect(inTable('Dragan Simić'), findsOneWidget);
+    });
+
+    testWidgets('a profile another admin already verified: Verifikuj says so and it leaves the queue', (tester) async {
+      useDesktopSize(tester);
+      final verifications = FakeVerificationRepository(
+        demoProfessors(DateTime.now()),
+        failSwitch,
+        delay: Duration.zero,
+      );
+      await pumpApp(tester, verifications: verifications);
+      await tester.pumpAndSettle();
+      final bloc = tester.element(find.byType(VerificationPage)).read<VerificationQueueBloc>();
+      final stale = (bloc.state as VerificationQueueLoaded).selected!;
+      expect(stale.fullName, 'Dragan Simić');
+
+      // Drugi administrator je već odlučio, a ovaj i dalje gleda staru listu.
+      final decided = stale.copyWith(
+        verification: Verified(by: const UserId('drugi-admin'), at: DateTime.now().toUtc()),
+      );
+      await verifications.save(decided, from: stale.verification);
+
+      await tapAndSettle(tester, find.text('Verifikuj'));
+
+      expect(find.text('Drugi administrator je već odlučio o ovom profilu.'), findsOneWidget);
+      // Tiho osvežavanje: tabela je tu, Dragana nema, izbor je prešao na sledećeg.
+      expect(inTable('Dragan Simić'), findsNothing);
+      expect(inTable('Ana Kovačević'), findsOneWidget);
+    });
+
+    testWidgets('a failed decision keeps the table and shows the failure text', (tester) async {
+      useDesktopSize(tester);
+      await pumpApp(tester);
+      await tester.pumpAndSettle();
+      failSwitch.failNext = true;
+
+      await tapAndSettle(tester, find.text('Verifikuj'));
+
+      expect(find.text('Podaci trenutno nisu dostupni. Pokušaj ponovo.'), findsOneWidget);
       expect(find.text('Red za verifikaciju nije učitan.'), findsNothing);
       expect(inTable('Dragan Simić'), findsOneWidget);
     });

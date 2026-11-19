@@ -8,6 +8,9 @@ class VerificationRequested extends VerificationQueueEvent {}
 // Administrator je kliknuo "Pokušaj ponovo" posle greške.
 class VerificationRetried extends VerificationQueueEvent {}
 
+// Dugme Osveži, Ctrl+R / Cmd+R ili ponovni ulazak u deo. Lista ostaje na ekranu dok stižu novi podaci.
+class VerificationRefreshed extends VerificationQueueEvent {}
+
 // Klik na red.
 class ProfileSelected extends VerificationQueueEvent {
   ProfileSelected(this.id);

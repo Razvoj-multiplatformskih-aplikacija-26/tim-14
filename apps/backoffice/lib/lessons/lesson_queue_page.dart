@@ -4,52 +4,61 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ui/ui.dart';
+import 'package:use_cases/use_cases.dart';
 
-import '../text/domain_errors.dart';
+import '../text/failures.dart';
 import '../widgets/centered_message.dart';
+import '../widgets/page_header.dart';
 import 'lesson_detail.dart';
 import 'queue_list.dart';
 import 'queue_table.dart';
 import 'queue_tabs.dart';
 
 // Ekran samo crta stanje Bloca i šalje mu događaje. Nijedno pravilo nije ovde.
-class LessonQueuePage extends StatelessWidget {
+class LessonQueuePage extends StatefulWidget {
   const LessonQueuePage({super.key});
 
   @override
+  State<LessonQueuePage> createState() => _LessonQueuePageState();
+}
+
+class _LessonQueuePageState extends State<LessonQueuePage> {
+  // Bloc je iznad rutera, pa kad se vratimo u ovaj deo lista je još tu, ali možda zastarela.
+  // Zato ulazak u deo tiho osveži listu. Pri prvom ulasku Bloc već učitava, pa ovo ne radi ništa.
+  @override
+  void initState() {
+    super.initState();
+    context.read<LessonQueueBloc>().add(QueueRefreshed());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.px32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: AppSpacing.px24,
-        children: [
-          Text('Časovi', style: Theme.of(context).textTheme.headlineMedium),
-          Expanded(
-            // listener je za jednokratne stvari kao SnackBar, builder crta ekran za svako stanje.
-            child: BlocConsumer<LessonQueueBloc, LessonQueueState>(
-              listener: _showActionError,
-              // Stanje je sealed, pa kompajler traži granu za svako. Novo stanje u Blocu ne prolazi dok se ne nacrta.
-              builder: (context, state) => switch (state) {
-                LessonQueueInitial() || LessonQueueLoading() => const Center(child: CircularProgressIndicator()),
-                final LessonQueueFailure failure => _FailureView(message: failure.message),
-                LessonQueueEmpty() => const _EmptyView(),
-                final LessonQueueLoaded loaded => _LoadedView(state: loaded),
-              },
-            ),
-          ),
-        ],
+    final bloc = context.read<LessonQueueBloc>();
+    return PageHeader(
+      title: 'Časovi',
+      onRefresh: () => bloc.add(QueueRefreshed()),
+      // listener je za jednokratne stvari kao SnackBar, builder crta ekran za svako stanje.
+      child: BlocConsumer<LessonQueueBloc, LessonQueueState>(
+        listener: _showNotice,
+        // Stanje je sealed, pa kompajler traži granu za svako. Novo stanje u Blocu ne prolazi dok se ne nacrta.
+        builder: (context, state) => switch (state) {
+          LessonQueueInitial() || LessonQueueLoading() => const Center(child: CircularProgressIndicator()),
+          final LessonQueueFailure failed => _FailureView(failure: failed.failure),
+          LessonQueueEmpty() => const _EmptyView(),
+          final LessonQueueLoaded loaded => _LoadedView(state: loaded),
+        },
       ),
     );
   }
 
-  // Bloc pre svake akcije obriše staru grešku, pa je svaka greška novo stanje i SnackBar se pokaže jednom.
-  void _showActionError(BuildContext context, LessonQueueState state) {
-    final error = state is LessonQueueLoaded ? state.actionError : null;
-    if (error == null) return;
+  // Bloc pre svake akcije obriše stari notice, pa je svaki notice novo stanje i SnackBar se pokaže jednom.
+  // Stanje posle tihog osvežavanja nema notice, pa SnackBar ostaje onaj koji je već na ekranu.
+  void _showNotice(BuildContext context, LessonQueueState state) {
+    final notice = state is LessonQueueLoaded ? state.notice : null;
+    if (notice == null) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(error.message)));
+      ..showSnackBar(SnackBar(content: Text(notice.message)));
   }
 }
 
@@ -224,16 +233,16 @@ class _NarrowView extends StatelessWidget {
 }
 
 class _FailureView extends StatelessWidget {
-  const _FailureView({required this.message});
+  const _FailureView({required this.failure});
 
-  final String message;
+  final RepositoryFailure failure;
 
   @override
   Widget build(BuildContext context) {
     return CenteredMessage(
       icon: Icons.cloud_off_outlined,
       title: 'Časovi nisu učitani.',
-      text: message,
+      text: failure.message,
       action: FilledButton(
         onPressed: () => context.read<LessonQueueBloc>().add(QueueRetried()),
         child: const Text('Pokušaj ponovo'),

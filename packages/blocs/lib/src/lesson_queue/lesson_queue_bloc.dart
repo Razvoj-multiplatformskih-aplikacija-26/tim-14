@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:domain/domain.dart';
 import 'package:use_cases/use_cases.dart';
 
+import '../action_notice.dart';
 import 'lesson_queue_event.dart';
 import 'lesson_queue_state.dart';
 
@@ -10,6 +11,7 @@ class LessonQueueBloc extends Bloc<LessonQueueEvent, LessonQueueState> {
     : super(const LessonQueueInitial()) {
     on<QueueRequested>(_onRequested);
     on<QueueRetried>(_onRetried);
+    on<QueueRefreshed>(_onRefreshed);
     on<TabChanged>(_onTabChanged);
     on<RowSelected>(_onRowSelected);
     on<SelectionMoved>(_onSelectionMoved);
@@ -36,7 +38,19 @@ class LessonQueueBloc extends Bloc<LessonQueueEvent, LessonQueueState> {
     await _load(emit);
   }
 
-  // Novo stanje se pravi bez actionError, inače bi se SnackBar ponovo pokazao na svaku strelicu.
+  // Ako se već učitava ili čuva akcija, osvežavanje ne radi ništa. Tako i prvi ulazak u deo,
+  // dok QueueRequested još učitava, ne učita listu dva puta.
+  Future<void> _onRefreshed(QueueRefreshed event, Emitter<LessonQueueState> emit) async {
+    final current = state;
+    if (_acting || current is LessonQueueLoading) return;
+    if (current is LessonQueueLoaded) {
+      await _reload(emit);
+    } else {
+      await _load(emit);
+    }
+  }
+
+  // Novo stanje se pravi bez notice, inače bi se SnackBar ponovo pokazao na svaku strelicu.
   void _onTabChanged(TabChanged event, Emitter<LessonQueueState> emit) {
     final current = state;
     if (current is! LessonQueueLoaded) return;
@@ -102,20 +116,35 @@ class LessonQueueBloc extends Bloc<LessonQueueEvent, LessonQueueState> {
       if (result is Success<T>) {
         emit(_withChanges(latest, changed(result.value)));
       } else if (result is Failure<T>) {
-        emit(LessonQueueLoaded(latest.rows, tab: latest.tab, selectedId: latest.selectedId, actionError: result.error));
+        // Kasni klijent: pravilo je odbilo akciju jer je lista na ekranu možda zastarela
+        // (učenik je povukao zahtev, drugi profesor je bio brži). Prvo kažemo zašto, pa tiho osvežimo.
+        emit(
+          LessonQueueLoaded(
+            latest.rows,
+            tab: latest.tab,
+            selectedId: latest.selectedId,
+            notice: ActionRejected(result.error),
+          ),
+        );
+        await _reload(emit);
       }
     } on RepositoryException catch (e) {
-      emit(LessonQueueFailure(e.message));
+      // Veza je pukla usred akcije. Lista ostaje, a greška ide u SnackBar.
+      _showFailure(emit, e.failure);
     } finally {
       _acting = false;
     }
   }
 
-  // Promenjene časove menjamo po id-ju, bez ponovnog učitavanja. Ako izabrani red više nije u ovom tabu,
-  // biramo red koji je sad na njegovom mestu, pa posle P izbor stoji na sledećem zahtevu.
+  // Promenjene časove menjamo po id-ju, bez ponovnog učitavanja.
   LessonQueueLoaded _withChanges(LessonQueueLoaded current, List<Lesson> changed) {
     final byId = {for (final lesson in changed) lesson.id: lesson};
-    final rows = [for (final row in current.rows) _toRow(byId[row.lesson.id] ?? row.lesson)];
+    return _keepSelection(current, [for (final row in current.rows) _toRow(byId[row.lesson.id] ?? row.lesson)]);
+  }
+
+  // Novi redovi, isti tab. Izbor ostaje ako je red i dalje u ovom tabu. Ako nije, biramo red koji je sad
+  // na njegovom mestu, pa posle P izbor stoji na sledećem zahtevu. Isto pravilo važi posle akcije i posle osvežavanja.
+  LessonQueueLoaded _keepSelection(LessonQueueLoaded current, List<QueueRow> rows) {
     final next = LessonQueueLoaded(rows, tab: current.tab, selectedId: current.selectedId);
     final visible = next.visibleRows;
     if (visible.any((row) => row.lesson.id == current.selectedId)) return next;
@@ -136,8 +165,34 @@ class LessonQueueBloc extends Bloc<LessonQueueEvent, LessonQueueState> {
         emit(LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: _firstIn(rows, QueueTab.pending)));
       }
     } on RepositoryException catch (e) {
-      emit(LessonQueueFailure(e.message));
+      emit(LessonQueueFailure(e.failure));
     }
+  }
+
+  // Tiho učitavanje: bez LessonQueueLoading, pa stari redovi ostaju na ekranu dok stižu novi.
+  // Novo stanje nema notice, pa se SnackBar koji je već na ekranu ne pokaže ponovo.
+  Future<void> _reload(Emitter<LessonQueueState> emit) async {
+    try {
+      final lessons = await _getQueue();
+      final latest = state;
+      if (latest is! LessonQueueLoaded) return;
+      if (lessons.isEmpty) {
+        emit(const LessonQueueEmpty());
+      } else {
+        emit(_keepSelection(latest, lessons.map(_toRow).toList()));
+      }
+    } on RepositoryException catch (e) {
+      _showFailure(emit, e.failure);
+    }
+  }
+
+  // Lista ostaje, greška ide u SnackBar. Prvo obrišemo stari notice, inače bi ista greška
+  // drugi put dala jednako stanje i SnackBar se ne bi pokazao.
+  void _showFailure(Emitter<LessonQueueState> emit, RepositoryFailure failure) {
+    final latest = state;
+    if (latest is! LessonQueueLoaded) return;
+    emit(LessonQueueLoaded(latest.rows, tab: latest.tab, selectedId: latest.selectedId));
+    emit(LessonQueueLoaded(latest.rows, tab: latest.tab, selectedId: latest.selectedId, notice: ActionFailed(failure)));
   }
 
   // Dugmad zavise samo od statusa. Da li je čas već počeo proverava domen tek kad se dugme pritisne.
