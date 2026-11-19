@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:api_contract/api_contract.dart';
 import 'package:relic/relic.dart';
+import 'package:use_cases/use_cases.dart' show RepositoryException;
 
 final _problemMimeType = MimeType.parse(ProblemDto.mediaType);
 
@@ -19,6 +20,17 @@ const maxBodyBytes = 16 * 1024;
 
 final class UnsupportedMediaType implements Exception {
   const UnsupportedMediaType();
+}
+
+/// A repository was asked for one record by id and there is none. [handleErrors] answers 404.
+/// In Spring terms: `EntityNotFoundException`, mapped to 404 by a `@ControllerAdvice`.
+final class RecordNotFound implements Exception {
+  const RecordNotFound(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'RecordNotFound($message)';
 }
 
 /// Reads the request body as one JSON object. Throws, and [handleErrors] turns the throw into a problem:
@@ -41,6 +53,11 @@ Middleware handleErrors() =>
         return problemResponse(unsupportedMediaType);
       } on MaxBodySizeExceeded {
         return problemResponse(payloadTooLarge);
+      } on RecordNotFound {
+        return problemResponse(notFound);
+      } on RepositoryException catch (error) {
+        stderr.writeln('${request.method} ${request.url.path}: ${error.message}: ${error.cause}');
+        return problemResponse(serviceUnavailable);
       } catch (error, stackTrace) {
         stderr.writeln('${request.method} ${request.url.path}: $error\n$stackTrace');
         return problemResponse(serverError);
@@ -55,4 +72,12 @@ const unsupportedMediaType = ProblemDto(
 
 const payloadTooLarge = ProblemDto(status: 413, code: ErrorCodes.payloadTooLarge, title: 'Request body too large');
 
+const notFound = ProblemDto(status: 404, code: ErrorCodes.notFound, title: 'Not found');
+
 const serverError = ProblemDto(status: 500, code: ErrorCodes.serverError, title: 'Server error');
+
+const serviceUnavailable = ProblemDto(
+  status: 503,
+  code: ErrorCodes.serviceUnavailable,
+  title: 'Service temporarily unavailable',
+);

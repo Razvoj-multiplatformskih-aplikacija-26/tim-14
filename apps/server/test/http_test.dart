@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:relic/relic.dart';
 import 'package:server/src/http.dart';
 import 'package:test/test.dart';
+import 'package:use_cases/use_cases.dart' show RepositoryException;
 
 late RelicServer server;
 late Uri base;
@@ -18,7 +19,9 @@ void main() {
   setUpAll(() async {
     final router = RelicRouter()
       ..post('/echo', (request) async => json(200, await readObject(request)))
-      ..get('/boom', (request) => throw StateError('a bug in a handler'));
+      ..get('/boom', (request) => throw StateError('a bug in a handler'))
+      ..get('/missing', (request) => throw const RecordNotFound('No professor nobody'))
+      ..get('/db-down', (request) => throw const RepositoryException('The database is unavailable', cause: 'refused'));
     server = RelicServer(() => IOAdapter.bind(InternetAddress.loopbackIPv4, port: 0));
     await server.mountAndStart(const Pipeline().addMiddleware(handleErrors()).addHandler(router.asHandler));
     base = Uri.parse('http://localhost:${server.port}');
@@ -75,5 +78,20 @@ void main() {
     expect(response.headers['content-type'], startsWith(ProblemDto.mediaType));
     expect(codeOf(response), ErrorCodes.serverError);
     expect(response.body, isNot(contains('a bug in a handler')));
+  });
+
+  test('an unreachable database is a 503 that leaks nothing', () async {
+    final response = await http.get(base.replace(path: '/db-down'));
+
+    expect(response.statusCode, 503);
+    expect(codeOf(response), ErrorCodes.serviceUnavailable);
+    expect(response.body, isNot(contains('refused')));
+  });
+
+  test('a record that does not exist is a 404', () async {
+    final response = await http.get(base.replace(path: '/missing'));
+
+    expect(response.statusCode, 404);
+    expect(codeOf(response), ErrorCodes.notFound);
   });
 }

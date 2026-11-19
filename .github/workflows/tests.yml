@@ -36,7 +36,8 @@ jobs:
             command: dart test
           - package: server
             path: apps/server
-            command: dart test
+            # CI has no Postgres. The db-tagged tests run locally against `docker compose up -d db`.
+            command: dart test -x db
 
     steps:
       - uses: actions/checkout@v4
