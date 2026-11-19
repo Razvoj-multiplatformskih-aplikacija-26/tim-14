@@ -53,14 +53,14 @@ void main() {
     setUp: () => repository = InMemoryVerificationRepository([jelena])..fail = true,
     build: buildBloc,
     act: (bloc) => bloc.add(VerificationRequested()),
-    expect: () => [const VerificationQueueLoading(), const VerificationQueueFailure('Nema mreže')],
+    expect: () => [const VerificationQueueLoading(), const VerificationQueueFailure(RepositoryFailure.unavailable)],
   );
 
   blocTest<VerificationQueueBloc, VerificationQueueState>(
     'retry after a failure loads the queue',
     setUp: () => repository = InMemoryVerificationRepository([jelena]),
     build: buildBloc,
-    seed: () => const VerificationQueueFailure('Nema mreže'),
+    seed: () => const VerificationQueueFailure(RepositoryFailure.unavailable),
     act: (bloc) => bloc.add(VerificationRetried()),
     expect: () => [
       const VerificationQueueLoading(),
@@ -149,7 +149,7 @@ void main() {
   );
 
   blocTest<VerificationQueueBloc, VerificationQueueState>(
-    'a too short reason shows an error and keeps the profile',
+    'a too short reason shows an error, keeps the profile and reloads',
     setUp: () => repository = InMemoryVerificationRepository([jelena, petar, sara]),
     build: buildBloc,
     seed: () => VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
@@ -158,8 +158,10 @@ void main() {
       VerificationQueueLoaded(
         [jelena, petar, sara],
         selectedId: jelena.id,
-        actionError: const RejectionReasonTooShort(3),
+        notice: const ActionRejected(RejectionReasonTooShort(3)),
       ),
+      // Tiho osvežavanje posle odbijanja: isti red, bez notice.
+      VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
     ],
     verify: (_) => expect(repository.profiles, [jelena, petar, sara]),
   );
@@ -171,7 +173,7 @@ void main() {
     seed: () => VerificationQueueLoaded(
       [jelena, petar, sara],
       selectedId: jelena.id,
-      actionError: const RejectionReasonTooShort(3),
+      notice: const ActionRejected(RejectionReasonTooShort(3)),
     ),
     act: (bloc) => bloc.add(RejectProfessorPressed('Ne.')),
     expect: () => [
@@ -179,8 +181,9 @@ void main() {
       VerificationQueueLoaded(
         [jelena, petar, sara],
         selectedId: jelena.id,
-        actionError: const RejectionReasonTooShort(3),
+        notice: const ActionRejected(RejectionReasonTooShort(3)),
       ),
+      VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
     ],
   );
 
@@ -225,7 +228,7 @@ void main() {
   );
 
   blocTest<VerificationQueueBloc, VerificationQueueState>(
-    'a repository error during a decision shows a failure',
+    'a repository error during a decision keeps the list and shows the failure',
     setUp: () => repository = InMemoryVerificationRepository([jelena]),
     build: buildBloc,
     seed: () => VerificationQueueLoaded([jelena], selectedId: jelena.id),
@@ -233,6 +236,90 @@ void main() {
       repository.fail = true;
       bloc.add(VerifyPressed());
     },
-    expect: () => [const VerificationQueueFailure('Nema mreže')],
+    expect: () => [
+      VerificationQueueLoaded(
+        [jelena],
+        selectedId: jelena.id,
+        notice: const ActionFailed(RepositoryFailure.unavailable),
+      ),
+    ],
   );
+
+  group('late client', () {
+    // Drugi administrator je već verifikovao Jelenu, a ovaj još gleda staru listu.
+    final decidedElsewhere = Verified(by: const UserId('drugi-admin'), at: now);
+
+    blocTest<VerificationQueueBloc, VerificationQueueState>(
+      'a decision already made elsewhere shows the reason, then reloads without a spinner',
+      setUp: () =>
+          repository = InMemoryVerificationRepository([jelena.copyWith(verification: decidedElsewhere), petar, sara]),
+      build: buildBloc,
+      seed: () => VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
+      act: (bloc) => bloc.add(VerifyPressed()),
+      expect: () => [
+        VerificationQueueLoaded(
+          [jelena, petar, sara],
+          selectedId: jelena.id,
+          notice: ActionRejected(
+            InvalidVerificationTransition(
+              from: decidedElsewhere,
+              to: Verified(by: admin.id, at: now),
+            ),
+          ),
+        ),
+        // Jelena više nije u redu, pa izbor prelazi na profil koji je na njenom mestu.
+        VerificationQueueLoaded([petar, sara], selectedId: petar.id),
+      ],
+      verify: (_) => expect(saved(jelena).verification, decidedElsewhere),
+    );
+  });
+
+  group('refresh', () {
+    blocTest<VerificationQueueBloc, VerificationQueueState>(
+      'reloads without a spinner and keeps the selection',
+      setUp: () => repository = InMemoryVerificationRepository([jelena, petar, sara]),
+      build: buildBloc,
+      seed: () => VerificationQueueLoaded([jelena, petar], selectedId: petar.id),
+      act: (bloc) => bloc.add(VerificationRefreshed()),
+      expect: () => [
+        VerificationQueueLoaded([jelena, petar, sara], selectedId: petar.id),
+      ],
+    );
+
+    blocTest<VerificationQueueBloc, VerificationQueueState>(
+      'a failed refresh keeps the list and shows the failure',
+      setUp: () => repository = InMemoryVerificationRepository([jelena])..fail = true,
+      build: buildBloc,
+      seed: () => VerificationQueueLoaded([jelena], selectedId: jelena.id),
+      act: (bloc) => bloc.add(VerificationRefreshed()),
+      expect: () => [
+        VerificationQueueLoaded(
+          [jelena],
+          selectedId: jelena.id,
+          notice: const ActionFailed(RepositoryFailure.unavailable),
+        ),
+      ],
+    );
+
+    blocTest<VerificationQueueBloc, VerificationQueueState>(
+      'is ignored while the queue is loading',
+      setUp: () => repository = InMemoryVerificationRepository([jelena]),
+      build: buildBloc,
+      seed: () => const VerificationQueueLoading(),
+      act: (bloc) => bloc.add(VerificationRefreshed()),
+      expect: () => <VerificationQueueState>[],
+    );
+
+    blocTest<VerificationQueueBloc, VerificationQueueState>(
+      'after a failure loads normally, with a spinner',
+      setUp: () => repository = InMemoryVerificationRepository([jelena]),
+      build: buildBloc,
+      seed: () => const VerificationQueueFailure(RepositoryFailure.unreachable),
+      act: (bloc) => bloc.add(VerificationRefreshed()),
+      expect: () => [
+        const VerificationQueueLoading(),
+        VerificationQueueLoaded([jelena], selectedId: jelena.id),
+      ],
+    );
+  });
 }

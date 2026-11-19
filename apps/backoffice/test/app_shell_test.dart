@@ -4,6 +4,7 @@ import 'package:backoffice/data/fail_switch.dart';
 import 'package:backoffice/data/fake_lesson_repository.dart';
 import 'package:backoffice/data/fake_verification_repository.dart';
 import 'package:backoffice/lessons/lesson_queue_page.dart';
+import 'package:backoffice/lessons/queue_table.dart';
 import 'package:backoffice/router.dart';
 import 'package:backoffice/shell/sidebar.dart';
 import 'package:blocs/blocs.dart';
@@ -65,6 +66,24 @@ void main() {
     expect(navItem('Verifikacija'), findsOneWidget);
     expect(navItem('Časovi'), findsNothing);
     expect(find.text(admin.name), findsOneWidget);
+  });
+
+  testWidgets('coming back to Časovi refreshes the list in place', (tester) async {
+    await pumpApp(tester);
+    await openMenuAndTap(tester, find.textContaining('Pređi na'));
+    failSwitch.failNext = true;
+
+    // Nazad na Milicu: Časovi se otvaraju ponovo, a Bloc već ima listu, pa je osveži bez spinera.
+    await tester.tap(find.text(admin.name));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Pređi na'));
+    await tester.pumpAndSettle();
+
+    expect(location(), Routes.lessons);
+    // Osvežavanje je stiglo do repozitorijuma (potrošilo je grešku), a lista je ostala na ekranu.
+    expect(failSwitch.failNext, isFalse);
+    expect(find.byType(QueueTable), findsOneWidget);
+    expect(find.text('Podaci trenutno nisu dostupni. Pokušaj ponovo.'), findsOneWidget);
   });
 
   testWidgets('a professor is sent back from the admin URL and from an unknown one', (tester) async {

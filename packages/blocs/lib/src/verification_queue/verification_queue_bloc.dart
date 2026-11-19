@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:domain/domain.dart';
 import 'package:use_cases/use_cases.dart';
 
+import '../action_notice.dart';
 import 'verification_queue_event.dart';
 import 'verification_queue_state.dart';
 
@@ -9,6 +10,7 @@ class VerificationQueueBloc extends Bloc<VerificationQueueEvent, VerificationQue
   VerificationQueueBloc(this._getQueue, this._verify, this._reject) : super(const VerificationQueueInitial()) {
     on<VerificationRequested>(_onRequested);
     on<VerificationRetried>(_onRetried);
+    on<VerificationRefreshed>(_onRefreshed);
     on<ProfileSelected>(_onProfileSelected);
     on<ProfileSelectionMoved>(_onSelectionMoved);
     on<VerifyPressed>(_onVerifyPressed);
@@ -30,7 +32,18 @@ class VerificationQueueBloc extends Bloc<VerificationQueueEvent, VerificationQue
     await _load(emit);
   }
 
-  // Novo stanje se pravi bez actionError, inače bi se SnackBar ponovo pokazao na svaku strelicu.
+  // Isto kao kod časova: dok se učitava ili čuva odluka, osvežavanje ne radi ništa.
+  Future<void> _onRefreshed(VerificationRefreshed event, Emitter<VerificationQueueState> emit) async {
+    final current = state;
+    if (_acting || current is VerificationQueueLoading) return;
+    if (current is VerificationQueueLoaded) {
+      await _reload(emit);
+    } else {
+      await _load(emit);
+    }
+  }
+
+  // Novo stanje se pravi bez notice, inače bi se SnackBar ponovo pokazao na svaku strelicu.
   void _onProfileSelected(ProfileSelected event, Emitter<VerificationQueueState> emit) {
     final current = state;
     if (current is! VerificationQueueLoaded) return;
@@ -75,23 +88,33 @@ class VerificationQueueBloc extends Bloc<VerificationQueueEvent, VerificationQue
       if (result is Success<ProfessorProfile>) {
         emit(_without(latest, profile.id));
       } else if (result is Failure<ProfessorProfile>) {
-        emit(VerificationQueueLoaded(latest.profiles, selectedId: latest.selectedId, actionError: result.error));
+        // Kasni klijent: možda je drugi administrator već odlučio. Prvo kažemo zašto, pa tiho osvežimo.
+        emit(
+          VerificationQueueLoaded(latest.profiles, selectedId: latest.selectedId, notice: ActionRejected(result.error)),
+        );
+        await _reload(emit);
       }
     } on RepositoryException catch (e) {
-      emit(VerificationQueueFailure(e.message));
+      // Veza je pukla usred odluke. Lista ostaje, a greška ide u SnackBar.
+      _showFailure(emit, e.failure);
     } finally {
       _acting = false;
     }
   }
 
-  // Profil o kome je odlučeno izlazi iz reda, bez ponovnog učitavanja. Ako je bio izabran, biramo profil
-  // koji je sad na njegovom mestu, pa posle V izbor stoji na sledećem. Posle poslednjeg red je prazan.
-  VerificationQueueState _without(VerificationQueueLoaded current, UserId decided) {
-    final profiles = current.profiles.where((profile) => profile.id != decided).toList();
-    if (profiles.isEmpty) return const VerificationQueueEmpty();
-    if (current.selectedId != decided) return VerificationQueueLoaded(profiles, selectedId: current.selectedId);
+  // Profil o kome je odlučeno izlazi iz reda, bez ponovnog učitavanja.
+  VerificationQueueState _without(VerificationQueueLoaded current, UserId decided) =>
+      _keepSelection(current, current.profiles.where((profile) => profile.id != decided).toList());
 
-    final index = current.profiles.indexWhere((profile) => profile.id == decided);
+  // Izbor ostaje ako je profil i dalje u redu. Ako nije, biramo profil koji je sad na njegovom mestu,
+  // pa posle V izbor stoji na sledećem. Kad nema nikog, red je prazan. Važi posle odluke i posle osvežavanja.
+  VerificationQueueState _keepSelection(VerificationQueueLoaded current, List<ProfessorProfile> profiles) {
+    if (profiles.isEmpty) return const VerificationQueueEmpty();
+    if (profiles.any((profile) => profile.id == current.selectedId)) {
+      return VerificationQueueLoaded(profiles, selectedId: current.selectedId);
+    }
+
+    final index = current.profiles.indexWhere((profile) => profile.id == current.selectedId);
     return VerificationQueueLoaded(profiles, selectedId: profiles[index.clamp(0, profiles.length - 1)].id);
   }
 
@@ -105,7 +128,29 @@ class VerificationQueueBloc extends Bloc<VerificationQueueEvent, VerificationQue
         emit(VerificationQueueLoaded(profiles, selectedId: profiles.first.id));
       }
     } on RepositoryException catch (e) {
-      emit(VerificationQueueFailure(e.message));
+      emit(VerificationQueueFailure(e.failure));
     }
+  }
+
+  // Tiho učitavanje: bez VerificationQueueLoading, pa stari redovi ostaju na ekranu dok stižu novi.
+  // Novo stanje nema notice, pa se SnackBar koji je već na ekranu ne pokaže ponovo.
+  Future<void> _reload(Emitter<VerificationQueueState> emit) async {
+    try {
+      final profiles = await _getQueue();
+      final latest = state;
+      if (latest is! VerificationQueueLoaded) return;
+      emit(_keepSelection(latest, profiles));
+    } on RepositoryException catch (e) {
+      _showFailure(emit, e.failure);
+    }
+  }
+
+  // Lista ostaje, greška ide u SnackBar. Prvo obrišemo stari notice, inače bi ista greška
+  // drugi put dala jednako stanje i SnackBar se ne bi pokazao.
+  void _showFailure(Emitter<VerificationQueueState> emit, RepositoryFailure failure) {
+    final latest = state;
+    if (latest is! VerificationQueueLoaded) return;
+    emit(VerificationQueueLoaded(latest.profiles, selectedId: latest.selectedId));
+    emit(VerificationQueueLoaded(latest.profiles, selectedId: latest.selectedId, notice: ActionFailed(failure)));
   }
 }

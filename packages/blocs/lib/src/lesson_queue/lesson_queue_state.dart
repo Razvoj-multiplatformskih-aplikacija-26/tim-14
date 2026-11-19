@@ -1,5 +1,8 @@
 import 'package:domain/domain.dart';
 import 'package:equatable/equatable.dart';
+import 'package:use_cases/use_cases.dart';
+
+import '../action_notice.dart';
 
 // Na čekanju, Potvrđeni, Održani, Arhiva.
 enum QueueTab { pending, confirmed, held, archive }
@@ -41,13 +44,14 @@ class LessonQueueLoading extends LessonQueueState {
   const LessonQueueLoading();
 }
 
+// Učitavanje nije uspelo. Nosi samo vrstu greške, a tekst za ekran pravi aplikacija.
 class LessonQueueFailure extends LessonQueueState {
-  const LessonQueueFailure(this.message);
+  const LessonQueueFailure(this.failure);
 
-  final String message;
+  final RepositoryFailure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class LessonQueueEmpty extends LessonQueueState {
@@ -55,7 +59,7 @@ class LessonQueueEmpty extends LessonQueueState {
 }
 
 class LessonQueueLoaded extends LessonQueueState {
-  const LessonQueueLoaded(this.rows, {required this.tab, this.selectedId, this.actionError});
+  const LessonQueueLoaded(this.rows, {required this.tab, this.selectedId, this.notice});
 
   // Svi časovi iz svih tabova, pa promena taba ne učitava ništa ponovo.
   final List<QueueRow> rows;
@@ -64,13 +68,13 @@ class LessonQueueLoaded extends LessonQueueState {
   // Izabrani red. Drži ga Bloc, pa ostaje izabran i kad se tabela pretvori u listu.
   final LessonId? selectedId;
 
-  // Greška poslednje akcije, ekran je prikaže kao SnackBar.
-  final DomainError? actionError;
+  // Ishod poslednje akcije koji ekran prikaže kao SnackBar: odbijeno pravilo ili greška veze.
+  final ActionNotice? notice;
 
   List<QueueRow> get visibleRows => rows.where((row) => row.tab == tab).toList();
 
   QueueRow? get selected => rows.where((row) => row.lesson.id == selectedId).firstOrNull;
 
   @override
-  List<Object?> get props => [rows, tab, selectedId, actionError];
+  List<Object?> get props => [rows, tab, selectedId, notice];
 }

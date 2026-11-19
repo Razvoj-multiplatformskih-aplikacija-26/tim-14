@@ -72,14 +72,14 @@ void main() {
     setUp: () => repository = InMemoryLessonRepository([first])..fail = true,
     build: buildBloc,
     act: (bloc) => bloc.add(QueueRequested()),
-    expect: () => [const LessonQueueLoading(), const LessonQueueFailure('Nema mreže')],
+    expect: () => [const LessonQueueLoading(), const LessonQueueFailure(RepositoryFailure.unavailable)],
   );
 
   blocTest<LessonQueueBloc, LessonQueueState>(
     'retry after a failure loads the queue',
     setUp: () => repository = InMemoryLessonRepository([first]),
     build: buildBloc,
-    seed: () => const LessonQueueFailure('Nema mreže'),
+    seed: () => const LessonQueueFailure(RepositoryFailure.unavailable),
     act: (bloc) => bloc.add(QueueRetried()),
     expect: () => [
       const LessonQueueLoading(),
@@ -194,14 +194,23 @@ void main() {
     ),
   );
 
+  // Posle svakog odbijanja lista se tiho osveži. Ovde je u repozitorijumu samo potvrđeni čas.
+  final reloadedConfirmed = [QueueRow(lesson: confirmed, actions: confirmedActions)];
+
   blocTest<LessonQueueBloc, LessonQueueState>(
-    'marking a future lesson as held shows an error',
+    'marking a future lesson as held shows an error, then reloads',
     setUp: () => repository = InMemoryLessonRepository([confirmed]),
     build: buildBloc,
     seed: () => LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id),
     act: (bloc) => bloc.add(HeldPressed()),
     expect: () => [
-      LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id, actionError: const LessonNotStarted()),
+      LessonQueueLoaded(
+        rows,
+        tab: QueueTab.confirmed,
+        selectedId: confirmed.id,
+        notice: const ActionRejected(LessonNotStarted()),
+      ),
+      LessonQueueLoaded(reloadedConfirmed, tab: QueueTab.confirmed, selectedId: confirmed.id),
     ],
     verify: (_) => expect(repository.lessons.single.status, isA<Confirmed>()),
   );
@@ -214,12 +223,18 @@ void main() {
       rows,
       tab: QueueTab.confirmed,
       selectedId: confirmed.id,
-      actionError: const LessonNotStarted(),
+      notice: const ActionRejected(LessonNotStarted()),
     ),
     act: (bloc) => bloc.add(HeldPressed()),
     expect: () => [
       LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id),
-      LessonQueueLoaded(rows, tab: QueueTab.confirmed, selectedId: confirmed.id, actionError: const LessonNotStarted()),
+      LessonQueueLoaded(
+        rows,
+        tab: QueueTab.confirmed,
+        selectedId: confirmed.id,
+        notice: const ActionRejected(LessonNotStarted()),
+      ),
+      LessonQueueLoaded(reloadedConfirmed, tab: QueueTab.confirmed, selectedId: confirmed.id),
     ],
   );
 
@@ -250,7 +265,7 @@ void main() {
   );
 
   blocTest<LessonQueueBloc, LessonQueueState>(
-    'a repository error during an action shows a failure',
+    'a repository error during an action keeps the list and shows the failure',
     setUp: () => repository = InMemoryLessonRepository([first]),
     build: buildBloc,
     seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: first.id),
@@ -258,6 +273,106 @@ void main() {
       repository.fail = true;
       bloc.add(ConfirmPressed());
     },
-    expect: () => [const LessonQueueFailure('Nema mreže')],
+    expect: () => [
+      LessonQueueLoaded(
+        rows,
+        tab: QueueTab.pending,
+        selectedId: first.id,
+        notice: const ActionFailed(RepositoryFailure.unavailable),
+      ),
+    ],
   );
+
+  group('late client', () {
+    // Učenik je povukao zahtev, a profesor još gleda staru listu u kojoj je zahtev na čekanju.
+    final withdrawn = first.copyWith(
+      status: Cancelled(by: student.id, at: now),
+    );
+
+    blocTest<LessonQueueBloc, LessonQueueState>(
+      'a refused action shows the reason, then reloads without a spinner',
+      setUp: () => repository = InMemoryLessonRepository([held, withdrawn, second, confirmed]),
+      build: buildBloc,
+      seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: first.id),
+      act: (bloc) => bloc.add(ConfirmPressed()),
+      expect: () => [
+        LessonQueueLoaded(
+          rows,
+          tab: QueueTab.pending,
+          selectedId: first.id,
+          notice: const ActionRejected(LessonChanged()),
+        ),
+        // Povučen zahtev je sad u arhivi, pa izbor prelazi na red koji je na njegovom mestu.
+        LessonQueueLoaded(
+          [
+            QueueRow(lesson: held, actions: const []),
+            QueueRow(lesson: withdrawn, actions: const []),
+            QueueRow(lesson: second, actions: pendingActions),
+            QueueRow(lesson: confirmed, actions: confirmedActions),
+          ],
+          tab: QueueTab.pending,
+          selectedId: second.id,
+        ),
+      ],
+      verify: (_) => expect(repository.lessons.firstWhere((lesson) => lesson.id == first.id), withdrawn),
+    );
+  });
+
+  group('refresh', () {
+    blocTest<LessonQueueBloc, LessonQueueState>(
+      'reloads without a spinner and keeps the selection',
+      setUp: () => repository = InMemoryLessonRepository([held, first, second, confirmed, nextRequest]),
+      build: buildBloc,
+      seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: second.id),
+      act: (bloc) => bloc.add(QueueRefreshed()),
+      expect: () => [
+        LessonQueueLoaded(
+          [...rows, QueueRow(lesson: nextRequest, actions: pendingActions)],
+          tab: QueueTab.pending,
+          selectedId: second.id,
+        ),
+      ],
+    );
+
+    blocTest<LessonQueueBloc, LessonQueueState>(
+      'a failed refresh keeps the list and shows the failure',
+      setUp: () => repository = InMemoryLessonRepository([first])..fail = true,
+      build: buildBloc,
+      seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: first.id),
+      act: (bloc) => bloc.add(QueueRefreshed()),
+      expect: () => [
+        LessonQueueLoaded(
+          rows,
+          tab: QueueTab.pending,
+          selectedId: first.id,
+          notice: const ActionFailed(RepositoryFailure.unavailable),
+        ),
+      ],
+    );
+
+    blocTest<LessonQueueBloc, LessonQueueState>(
+      'is ignored while the queue is loading',
+      setUp: () => repository = InMemoryLessonRepository([first]),
+      build: buildBloc,
+      seed: () => const LessonQueueLoading(),
+      act: (bloc) => bloc.add(QueueRefreshed()),
+      expect: () => <LessonQueueState>[],
+    );
+
+    blocTest<LessonQueueBloc, LessonQueueState>(
+      'after a failure loads normally, with a spinner',
+      setUp: () => repository = InMemoryLessonRepository([first]),
+      build: buildBloc,
+      seed: () => const LessonQueueFailure(RepositoryFailure.unreachable),
+      act: (bloc) => bloc.add(QueueRefreshed()),
+      expect: () => [
+        const LessonQueueLoading(),
+        LessonQueueLoaded(
+          [QueueRow(lesson: first, actions: pendingActions)],
+          tab: QueueTab.pending,
+          selectedId: first.id,
+        ),
+      ],
+    );
+  });
 }
