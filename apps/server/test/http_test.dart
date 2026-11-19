@@ -20,6 +20,7 @@ void main() {
     final router = RelicRouter()
       ..post('/echo', (request) async => json(200, await readObject(request)))
       ..get('/boom', (request) => throw StateError('a bug in a handler'))
+      ..get('/missing', (request) => throw const RecordNotFound('No professor nobody'))
       ..get('/db-down', (request) => throw const RepositoryException('The database is unavailable', cause: 'refused'));
     server = RelicServer(() => IOAdapter.bind(InternetAddress.loopbackIPv4, port: 0));
     await server.mountAndStart(const Pipeline().addMiddleware(handleErrors()).addHandler(router.asHandler));
@@ -85,5 +86,12 @@ void main() {
     expect(response.statusCode, 503);
     expect(codeOf(response), ErrorCodes.serviceUnavailable);
     expect(response.body, isNot(contains('refused')));
+  });
+
+  test('a record that does not exist is a 404', () async {
+    final response = await http.get(base.replace(path: '/missing'));
+
+    expect(response.statusCode, 404);
+    expect(codeOf(response), ErrorCodes.notFound);
   });
 }

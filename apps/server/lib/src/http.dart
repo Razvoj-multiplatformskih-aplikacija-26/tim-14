@@ -22,6 +22,17 @@ final class UnsupportedMediaType implements Exception {
   const UnsupportedMediaType();
 }
 
+/// A repository was asked for one record by id and there is none. [handleErrors] answers 404.
+/// In Spring terms: `EntityNotFoundException`, mapped to 404 by a `@ControllerAdvice`.
+final class RecordNotFound implements Exception {
+  const RecordNotFound(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'RecordNotFound($message)';
+}
+
 /// Reads the request body as one JSON object. Throws, and [handleErrors] turns the throw into a problem:
 /// not JSON → 415, too big → 413, broken JSON or not an object → 400.
 Future<Map<String, Object?>> readObject(Request request) async {
@@ -42,6 +53,8 @@ Middleware handleErrors() =>
         return problemResponse(unsupportedMediaType);
       } on MaxBodySizeExceeded {
         return problemResponse(payloadTooLarge);
+      } on RecordNotFound {
+        return problemResponse(notFound);
       } on RepositoryException catch (error) {
         stderr.writeln('${request.method} ${request.url.path}: ${error.message}: ${error.cause}');
         return problemResponse(serviceUnavailable);
@@ -58,6 +71,8 @@ const unsupportedMediaType = ProblemDto(
 );
 
 const payloadTooLarge = ProblemDto(status: 413, code: ErrorCodes.payloadTooLarge, title: 'Request body too large');
+
+const notFound = ProblemDto(status: 404, code: ErrorCodes.notFound, title: 'Not found');
 
 const serverError = ProblemDto(status: 500, code: ErrorCodes.serverError, title: 'Server error');
 
