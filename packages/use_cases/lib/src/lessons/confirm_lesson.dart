@@ -18,14 +18,11 @@ final class ConfirmLesson {
       now: _clock.now(),
     );
 
+    // Jedan poziv za sve upise: na serveru potvrda i odbijanja idu u jednoj transakciji.
+    // Vraćena lista odbijenih može biti kraća ako je neki učenik u međuvremenu povukao zahtev.
     if (result is Success<Confirmation>) {
       final confirmation = result.value;
-      final confirmed = await _lessons.save(confirmation.confirmed);
-      final rejected = <Lesson>[];
-      for (final other in confirmation.rejected) {
-        rejected.add(await _lessons.save(other));
-      }
-      return Success(Confirmation(confirmed: confirmed, rejected: rejected));
+      return _lessons.saveConfirmation(confirmation);
     }
     return result;
   }

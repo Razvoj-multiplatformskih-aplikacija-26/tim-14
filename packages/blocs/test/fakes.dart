@@ -43,6 +43,7 @@ final class FixedClock implements Clock {
   DateTime now() => time;
 }
 
+// Ponaša se kao baza: save proverava status (from), saveConfirmation radi sve ili ništa.
 final class InMemoryLessonRepository implements LessonRepository {
   InMemoryLessonRepository([List<Lesson> lessons = const []]) : lessons = [...lessons];
 
@@ -53,6 +54,13 @@ final class InMemoryLessonRepository implements LessonRepository {
     if (fail) {
       throw const RepositoryException('Nema mreže');
     }
+  }
+
+  Lesson? _stored(LessonId id) => lessons.where((lesson) => lesson.id == id).firstOrNull;
+
+  void _put(Lesson lesson) {
+    lessons.removeWhere((other) => other.id == lesson.id);
+    lessons.add(lesson);
   }
 
   @override
@@ -74,14 +82,64 @@ final class InMemoryLessonRepository implements LessonRepository {
   }
 
   @override
+  Future<Set<SlotId>> takenSlotsOf(UserId professor) async {
+    _check();
+    return {
+      for (final lesson in lessons)
+        if (lesson.professorId == professor && lesson.status is Confirmed) lesson.slotId,
+    };
+  }
+
+  @override
+  Future<Lesson?> find(LessonId id) async {
+    _check();
+    return _stored(id);
+  }
+
+  @override
   Future<LessonId> nextId() async => LessonId('lesson-${lessons.length + 1}');
 
   @override
-  Future<Lesson> save(Lesson lesson) async {
+  Future<Result<Lesson>> create(Lesson lesson) async {
     _check();
-    lessons.removeWhere((other) => other.id == lesson.id);
-    lessons.add(lesson);
-    return lesson;
+    _put(lesson);
+    return Success(lesson);
+  }
+
+  @override
+  Future<Result<Lesson>> save(Lesson lesson, {required LessonStatus from}) async {
+    _check();
+    final stored = _stored(lesson.id);
+    if (stored == null || stored.status.runtimeType != from.runtimeType) {
+      return const Failure(LessonChanged());
+    }
+    _put(lesson);
+    return Success(lesson);
+  }
+
+  @override
+  Future<Result<Confirmation>> saveConfirmation(Confirmation confirmation) async {
+    _check();
+    final confirmed = confirmation.confirmed;
+    if (_stored(confirmed.id)?.status is! Pending) {
+      return const Failure(LessonChanged());
+    }
+    final slotTaken = lessons.any(
+      (other) => other.slotId == confirmed.slotId && other.id != confirmed.id && other.status is Confirmed,
+    );
+    if (slotTaken) {
+      return const Failure(SlotTaken());
+    }
+
+    _put(confirmed);
+    final rejected = <Lesson>[];
+    for (final other in confirmation.rejected) {
+      if (_stored(other.id)?.status is Pending) {
+        _put(other);
+        rejected.add(other);
+      }
+    }
+    return Success(Confirmation(confirmed: confirmed, rejected: rejected));
   }
 }
 
@@ -107,12 +165,25 @@ final class InMemoryVerificationRepository implements VerificationRepository {
   }
 
   @override
-  Future<ProfessorProfile> save(ProfessorProfile profile) async {
+  Future<ProfessorProfile?> find(UserId professor) async {
+    _check();
+    return profiles.where((profile) => profile.id == professor).firstOrNull;
+  }
+
+  @override
+  Future<Result<ProfessorProfile>> save(ProfessorProfile profile, {required VerificationStatus from}) async {
     _check();
     await gate?.future;
+    final stored = profiles.where((other) => other.id == profile.id).firstOrNull;
+    if (stored == null) {
+      return const Failure(NotFound());
+    }
+    if (stored.verification.runtimeType != from.runtimeType) {
+      return Failure(InvalidVerificationTransition(from: stored.verification, to: profile.verification));
+    }
     profiles.removeWhere((other) => other.id == profile.id);
     profiles.add(profile);
-    return profile;
+    return Success(profile);
   }
 }
 
@@ -131,9 +202,17 @@ final class InMemoryProfessorRepository implements ProfessorRepository {
   }
 
   @override
-  Future<List<ProfessorProfile>> professors() async {
+  Future<ProfessorsPage> professors({int offset = 0, int limit = 20}) async {
     _check();
-    return profiles;
+    final end = offset + limit < profiles.length ? offset + limit : profiles.length;
+    final start = offset < end ? offset : end;
+    return ProfessorsPage(
+      items: [
+        for (final profile in profiles.sublist(start, end))
+          ProfessorSummary(profile: profile, listings: await listingsOf(profile.id)),
+      ],
+      nextOffset: end < profiles.length ? end : null,
+    );
   }
 
   @override
@@ -152,5 +231,11 @@ final class InMemoryProfessorRepository implements ProfessorRepository {
   Future<List<Slot>> slotsOf(UserId professor) async {
     _check();
     return slots.where((slot) => slot.professorId == professor).toList();
+  }
+
+  @override
+  Future<Slot?> findSlot(SlotId id) async {
+    _check();
+    return slots.where((slot) => slot.id == id).firstOrNull;
   }
 }

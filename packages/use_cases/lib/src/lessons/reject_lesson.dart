@@ -15,7 +15,7 @@ final class RejectLesson {
 
     if (result is Success<Lesson>) {
       final value = result.value;
-      return Success(await _lessons.save(value));
+      return _lessons.save(value, from: lesson.status);
     }
     return result;
   }

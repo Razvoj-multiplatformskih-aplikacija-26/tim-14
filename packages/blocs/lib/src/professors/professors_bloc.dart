@@ -23,11 +23,12 @@ class ProfessorsBloc extends Bloc<ProfessorsEvent, ProfessorsState> {
   Future<void> _load(Emitter<ProfessorsState> emit) async {
     emit(const ProfessorsLoading());
     try {
-      final professors = await _getProfessors();
-      if (professors.isEmpty) {
+      // Za sada samo prva strana (do 20 profesora). Dugme "Učitaj još" bi tražilo offset: page.nextOffset.
+      final page = await _getProfessors();
+      if (page.items.isEmpty) {
         emit(const ProfessorsEmpty());
       } else {
-        emit(ProfessorsLoaded(professors));
+        emit(ProfessorsLoaded(page.items));
       }
     } on RepositoryException catch (e) {
       emit(ProfessorsFailure(e.message));

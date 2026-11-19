@@ -25,9 +25,17 @@ class FakeProfessorRepository implements ProfessorRepository {
   }
 
   @override
-  Future<List<ProfessorProfile>> professors() async {
+  Future<ProfessorsPage> professors({int offset = 0, int limit = 20}) async {
     await _load();
-    return profiles;
+    final end = offset + limit < profiles.length ? offset + limit : profiles.length;
+    final start = offset < end ? offset : end;
+    return ProfessorsPage(
+      items: [
+        for (final profile in profiles.sublist(start, end))
+          ProfessorSummary(profile: profile, listings: await listingsOf(profile.id)),
+      ],
+      nextOffset: end < profiles.length ? end : null,
+    );
   }
 
   @override
@@ -51,5 +59,11 @@ class FakeProfessorRepository implements ProfessorRepository {
   Future<List<Slot>> slotsOf(UserId professor) async {
     failSwitch.check();
     return slots.where((slot) => slot.professorId == professor).toList();
+  }
+
+  @override
+  Future<Slot?> findSlot(SlotId id) async {
+    failSwitch.check();
+    return slots.where((slot) => slot.id == id).firstOrNull;
   }
 }

@@ -20,7 +20,7 @@ final class RejectProfessor {
 
     if (result is Success<ProfessorProfile>) {
       final value = result.value;
-      return Success(await _verifications.save(value));
+      return _verifications.save(value, from: profile.verification);
     }
     return result;
   }

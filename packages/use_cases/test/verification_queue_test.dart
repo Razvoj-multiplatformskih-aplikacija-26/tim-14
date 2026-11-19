@@ -60,6 +60,21 @@ void main() {
       expect(repository.profiles.single.verification, Verified(by: admin.id, at: now));
     });
 
+    test('a profile another admin already verified is not verified again', () async {
+      // Drugi administrator je odlučio dok je ovaj gledao staru kopiju.
+      final verified = profileOf(
+        'jelena',
+        verification: Verified(by: const UserId('drugi-admin'), at: now),
+      );
+      final repository = InMemoryVerificationRepository([verified]);
+      final verify = VerifyProfessor(repository, FixedClock(now), admin);
+
+      final result = await verify(submitted);
+
+      expect(result.errorOrNull, isA<InvalidVerificationTransition>());
+      expect(repository.profiles, [verified]);
+    });
+
     test('a professor cannot verify', () async {
       final repository = InMemoryVerificationRepository([submitted]);
       final verify = VerifyProfessor(repository, FixedClock(now), professor);

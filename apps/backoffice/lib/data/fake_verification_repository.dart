@@ -23,14 +23,24 @@ final class FakeVerificationRepository implements VerificationRepository {
   }
 
   @override
-  Future<ProfessorProfile> save(ProfessorProfile profile) async {
+  Future<ProfessorProfile?> find(UserId professor) async {
+    _failSwitch.check();
+    return _profiles.where((profile) => profile.id == professor).firstOrNull;
+  }
+
+  // Kao baza na serveru: ako je drugi administrator već odlučio, ništa se ne upisuje.
+  @override
+  Future<Result<ProfessorProfile>> save(ProfessorProfile profile, {required VerificationStatus from}) async {
     _failSwitch.check();
     final index = _profiles.indexWhere((other) => other.id == profile.id);
     if (index == -1) {
-      _profiles.add(profile);
-    } else {
-      _profiles[index] = profile;
+      return const Failure(NotFound());
     }
-    return profile;
+    final stored = _profiles[index].verification;
+    if (stored.runtimeType != from.runtimeType) {
+      return Failure(InvalidVerificationTransition(from: stored, to: profile.verification));
+    }
+    _profiles[index] = profile;
+    return Success(profile);
   }
 }

@@ -39,6 +39,21 @@ final class FakeLessonRepository implements LessonRepository {
   }
 
   @override
+  Future<Set<SlotId>> takenSlotsOf(UserId professor) async {
+    _failSwitch.check();
+    return {
+      for (final lesson in _lessons)
+        if (lesson.professorId == professor && lesson.status is Confirmed) lesson.slotId,
+    };
+  }
+
+  @override
+  Future<Lesson?> find(LessonId id) async {
+    _failSwitch.check();
+    return _stored(id);
+  }
+
+  @override
   Future<LessonId> nextId() async {
     _failSwitch.check();
     _lastId++;
@@ -46,14 +61,54 @@ final class FakeLessonRepository implements LessonRepository {
   }
 
   @override
-  Future<Lesson> save(Lesson lesson) async {
+  Future<Result<Lesson>> create(Lesson lesson) async {
+    _failSwitch.check();
+    _lessons.add(lesson);
+    return Success(lesson);
+  }
+
+  // Kao baza na serveru: upis prolazi samo ako čas još ima status from. Inače ga je neko već promenio.
+  @override
+  Future<Result<Lesson>> save(Lesson lesson, {required LessonStatus from}) async {
     _failSwitch.check();
     final index = _lessons.indexWhere((other) => other.id == lesson.id);
-    if (index == -1) {
-      _lessons.add(lesson);
-    } else {
-      _lessons[index] = lesson;
+    if (index == -1 || _lessons[index].status.runtimeType != from.runtimeType) {
+      return const Failure(LessonChanged());
     }
-    return lesson;
+    _lessons[index] = lesson;
+    return Success(lesson);
+  }
+
+  // Kao transakcija na serveru: potvrda i odbijanja zajedno. Odbija samo zahteve koji još čekaju.
+  @override
+  Future<Result<Confirmation>> saveConfirmation(Confirmation confirmation) async {
+    _failSwitch.check();
+    final confirmed = confirmation.confirmed;
+    if (_stored(confirmed.id)?.status is! Pending) {
+      return const Failure(LessonChanged());
+    }
+    final slotTaken = _lessons.any(
+      (other) => other.slotId == confirmed.slotId && other.id != confirmed.id && other.status is Confirmed,
+    );
+    if (slotTaken) {
+      return const Failure(SlotTaken());
+    }
+
+    _replace(confirmed);
+    final rejected = <Lesson>[];
+    for (final other in confirmation.rejected) {
+      if (_stored(other.id)?.status is Pending) {
+        _replace(other);
+        rejected.add(other);
+      }
+    }
+    return Success(Confirmation(confirmed: confirmed, rejected: rejected));
+  }
+
+  Lesson? _stored(LessonId id) => _lessons.where((lesson) => lesson.id == id).firstOrNull;
+
+  void _replace(Lesson lesson) {
+    final index = _lessons.indexWhere((other) => other.id == lesson.id);
+    _lessons[index] = lesson;
   }
 }
