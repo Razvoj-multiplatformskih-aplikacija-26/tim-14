@@ -25,11 +25,35 @@ void main() {
   test('GetProfessors returns every professor with their own listings', () async {
     final repository = InMemoryProfessorRepository(profiles: [milica, nikola], listings: [mathListing]);
 
-    final result = await GetProfessors(repository)();
+    final page = await GetProfessors(repository)();
 
-    expect(result.map((summary) => summary.profile), [milica, nikola]);
-    expect(result[0].listings, [mathListing]);
-    expect(result[1].listings, isEmpty);
+    expect(page.items.map((summary) => summary.profile), [milica, nikola]);
+    expect(page.items[0].listings, [mathListing]);
+    expect(page.items[1].listings, isEmpty);
+    expect(page.nextOffset, isNull);
+  });
+
+  test('GetProfessors returns 20 per page, and the last page has no nextOffset', () async {
+    final many = [
+      for (var i = 0; i < 21; i++) ProfessorProfile(id: UserId('p-$i'), fullName: 'P $i', city: City.belgrade, bio: ''),
+    ];
+    final getProfessors = GetProfessors(InMemoryProfessorRepository(profiles: many));
+
+    final first = await getProfessors();
+    final second = await getProfessors(offset: first.nextOffset!);
+
+    expect(first.items, hasLength(20));
+    expect(first.nextOffset, 20);
+    expect(second.items.single.profile, many.last);
+    expect(second.nextOffset, isNull);
+  });
+
+  test('GetProfessors asks for the page at the given offset', () async {
+    final repository = InMemoryProfessorRepository(profiles: [milica, nikola]);
+
+    final page = await GetProfessors(repository)(offset: 1);
+
+    expect(page.items.map((summary) => summary.profile), [nikola]);
   });
 
   test('lowestPrice is the price of the cheapest listing', () {

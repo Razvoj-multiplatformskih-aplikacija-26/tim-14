@@ -45,8 +45,21 @@ void main() {
           status: Rejected(cause: RejectionCause.slotTaken, at: now),
         ),
       ]);
-      expect(repository.saveCalls, 2);
+      expect(repository.saveCalls, 1);
       expect(repository.lessons, unorderedEquals([confirmation.confirmed, ...confirmation.rejected, otherSlot]));
+    });
+
+    test('a request the student withdrew in the meantime is not confirmed', () async {
+      // Profesor ima staru kopiju (na čekanju), a učenik je zahtev već povukao.
+      final stale = lessonAt(inTwoDays, id: 'ana');
+      final withdrawn = stale.copyWith(status: Cancelled(by: student.id, at: now));
+      final repository = InMemoryLessonRepository([withdrawn]);
+      final confirm = ConfirmLesson(repository, FixedClock(now), professor);
+
+      final result = await confirm(stale);
+
+      expect(result, const Failure<Confirmation>(LessonChanged()));
+      expect(repository.lessons, [withdrawn]);
     });
 
     test('a slot already confirmed for another student is taken', () async {

@@ -27,7 +27,7 @@ final class RequestLesson {
     );
 
     if (result case Success(:final value)) {
-      return Success(await _lessons.save(value));
+      return _lessons.create(value);
     }
     return result;
   }

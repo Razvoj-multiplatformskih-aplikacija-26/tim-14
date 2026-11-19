@@ -25,6 +25,8 @@ final class GetProfessorPage {
     final profile = await _professors.profile(professor);
     final listings = await _professors.listingsOf(professor);
     final slots = await _professors.slotsOf(professor);
+    // Posle Ilijinog domenskog PR-a (I1): freeSlots(slots, taken: await _lessons.takenSlotsOf(professor), now: …),
+    // da stranica profesora ne učitava tuđe časove.
     final lessons = await _lessons.lessonsOfProfessor(professor);
 
     return ProfessorPage(

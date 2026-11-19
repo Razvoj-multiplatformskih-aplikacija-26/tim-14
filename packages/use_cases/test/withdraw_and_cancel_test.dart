@@ -32,6 +32,19 @@ void main() {
       expect(repository.saveCalls, 0);
     });
 
+    test('a request the professor confirmed in the meantime is not withdrawn', () async {
+      // Učenik ima staru kopiju (na čekanju), a profesor je zahtev već potvrdio.
+      final stale = lessonAt(inTwoDays);
+      final confirmed = stale.copyWith(status: Confirmed(at: now));
+      final repository = InMemoryLessonRepository([confirmed]);
+      final withdraw = WithdrawRequest(repository, FixedClock(now), student);
+
+      final result = await withdraw(stale);
+
+      expect(result, const Failure<Lesson>(LessonChanged()));
+      expect(repository.lessons, [confirmed]);
+    });
+
     test('another student cannot withdraw it', () async {
       final lesson = lessonAt(inTwoDays);
       final repository = InMemoryLessonRepository([lesson]);

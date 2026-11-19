@@ -23,8 +23,20 @@ class EmptyLessonRepository implements LessonRepository {
   }
 
   @override
+  Future<Set<SlotId>> takenSlotsOf(UserId professor) async => {};
+
+  @override
+  Future<Lesson?> find(LessonId id) async => null;
+
+  @override
   Future<LessonId> nextId() async => const LessonId('new-1');
 
   @override
-  Future<Lesson> save(Lesson lesson) async => lesson;
+  Future<Result<Lesson>> create(Lesson lesson) async => Success(lesson);
+
+  @override
+  Future<Result<Lesson>> save(Lesson lesson, {required LessonStatus from}) async => Success(lesson);
+
+  @override
+  Future<Result<Confirmation>> saveConfirmation(Confirmation confirmation) async => Success(confirmation);
 }

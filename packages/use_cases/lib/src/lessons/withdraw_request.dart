@@ -14,7 +14,7 @@ final class WithdrawRequest {
     final result = withdrawRequest(lesson, by: _me, now: _clock.now());
 
     if (result case Success(:final value)) {
-      return Success(await _lessons.save(value));
+      return _lessons.save(value, from: lesson.status);
     }
     return result;
   }
