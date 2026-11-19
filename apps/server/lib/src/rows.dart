@@ -120,3 +120,89 @@ Slot slotFromRow(ResultRow row) {
     duration: durationOf(column['duration_minutes'] as int),
   );
 }
+
+const lessonColumns = '''
+  id, slot_id, listing_id, professor_id, student_id, starts_at, duration_minutes, message, created_at,
+  status, status_at, rejection_cause, cancelled_by, note''';
+
+Lesson lessonFromRow(ResultRow row) {
+  final column = row.toColumnMap();
+  return Lesson(
+    id: LessonId(column['id'] as String),
+    slotId: SlotId(column['slot_id'] as String),
+    listingId: ListingId(column['listing_id'] as String),
+    professorId: UserId(column['professor_id'] as String),
+    studentId: UserId(column['student_id'] as String),
+    start: _utc(column['starts_at']),
+    duration: durationOf(column['duration_minutes'] as int),
+    message: stored(RequestMessage.parse(column['message'] as String)),
+    createdAt: _utc(column['created_at']),
+    status: _lessonStatusFromColumns(column),
+  );
+}
+
+/// Like the verification: `status` says which state, the other four columns hold its fields.
+LessonStatus _lessonStatusFromColumns(Map<String, dynamic> column) {
+  final status = column['status'] as String;
+  if (status == 'pending') {
+    return const Pending();
+  }
+  final at = _utc(column['status_at']);
+  return switch (status) {
+    'confirmed' => Confirmed(at: at),
+    'rejected' => Rejected(cause: _causeFromName(column['rejection_cause'] as String), at: at),
+    'cancelled' => Cancelled(by: UserId(column['cancelled_by'] as String), at: at),
+    'held' => Held(at: at, note: column['note'] == null ? null : stored(LessonNote.parse(column['note'] as String))),
+    'no_show' => NoShow(at: at),
+    _ => throw StateError('Unknown lesson status $status'),
+  };
+}
+
+RejectionCause _causeFromName(String name) => switch (name) {
+  'by_professor' => RejectionCause.byProfessor,
+  'slot_taken' => RejectionCause.slotTaken,
+  _ => throw StateError('Unknown rejection cause $name'),
+};
+
+/// The `status` column's value for each state, as the migration's CHECK allows.
+String lessonStatusNameOf(LessonStatus status) => switch (status) {
+  Pending() => 'pending',
+  Confirmed() => 'confirmed',
+  Rejected() => 'rejected',
+  Cancelled() => 'cancelled',
+  Held() => 'held',
+  NoShow() => 'no_show',
+};
+
+/// The other way: the five status columns of a lesson, as SQL parameters named after the columns.
+/// A column the status does not have is NULL, so writing a new status also clears the old one's fields.
+Map<String, Object?> lessonStatusParameters(LessonStatus status) {
+  DateTime? at;
+  String? cause;
+  String? cancelledBy;
+  String? note;
+  if (status is Confirmed) {
+    at = status.at;
+  } else if (status is Rejected) {
+    at = status.at;
+    cause = switch (status.cause) {
+      RejectionCause.byProfessor => 'by_professor',
+      RejectionCause.slotTaken => 'slot_taken',
+    };
+  } else if (status is Cancelled) {
+    at = status.at;
+    cancelledBy = status.by.value;
+  } else if (status is Held) {
+    at = status.at;
+    note = status.note?.text;
+  } else if (status is NoShow) {
+    at = status.at;
+  }
+  return {
+    'status': lessonStatusNameOf(status),
+    'status_at': at,
+    'rejection_cause': cause,
+    'cancelled_by': cancelledBy,
+    'note': note,
+  };
+}

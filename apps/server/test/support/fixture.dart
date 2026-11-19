@@ -1,4 +1,4 @@
-import 'package:postgres/postgres.dart' show QueryMode;
+import 'package:postgres/postgres.dart' show QueryMode, Sql;
 import 'package:server/server.dart';
 
 /// Rows every repository test starts from: an admin, five professors (one per verification state, two awaiting
@@ -51,3 +51,44 @@ Future<void> insertFixture(Database database) => insertRows(database, fixtureSql
 /// Runs [sql] (one or more statements) as it is. For rows a test adds on top of the fixture.
 Future<void> insertRows(Database database, String sql) =>
     database.run((db) => db.execute(sql, queryMode: QueryMode.simple));
+
+const requestText = 'Treba mi pomoć oko integrala.';
+
+final requestedAt = DateTime.utc(2026, 11, 18, 9);
+
+/// Inserts one lesson for [slot], copying its listing, professor, time and length from the slot row, the way
+/// a request does. Status columns are written as given, so a test can start from any state.
+Future<void> insertLesson(
+  Database database,
+  String id, {
+  String slot = 's-1',
+  String student = 'ana',
+  String status = 'pending',
+  DateTime? statusAt,
+  String? cause,
+  String? cancelledBy,
+  String? note,
+}) => database.run(
+  (db) => db.execute(
+    Sql.named('''
+      INSERT INTO lessons (id, slot_id, listing_id, professor_id, professor_name, student_id, student_name,
+                           starts_at, duration_minutes, message, created_at,
+                           status, status_at, rejection_cause, cancelled_by, note)
+      SELECT @id, s.id, s.listing_id, s.professor_id, p.name, u.id, u.name, s.starts_at, s.duration_minutes,
+             @message, @created_at:timestamptz, @status, @status_at:timestamptz, @cause, @cancelled_by, @note
+      FROM slots s JOIN users p ON p.id = s.professor_id JOIN users u ON u.id = @student
+      WHERE s.id = @slot'''),
+    parameters: {
+      'id': id,
+      'slot': slot,
+      'student': student,
+      'message': requestText,
+      'created_at': requestedAt,
+      'status': status,
+      'status_at': statusAt,
+      'cause': cause,
+      'cancelled_by': cancelledBy,
+      'note': note,
+    },
+  ),
+);
