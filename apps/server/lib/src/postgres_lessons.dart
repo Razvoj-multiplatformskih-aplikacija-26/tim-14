@@ -1,5 +1,5 @@
 import 'package:domain/domain.dart';
-import 'package:postgres/postgres.dart' show Sql;
+import 'package:postgres/postgres.dart' show Session, Sql;
 import 'package:use_cases/use_cases.dart';
 
 import 'database.dart';
@@ -86,11 +86,60 @@ final class PostgresLessons implements LessonRepository {
     return Success(lesson);
   });
 
+  /// Writes the new status only if the lesson still has the status [from], the one the caller saw.
+  ///
+  /// 0 rows: someone changed the lesson first (the student withdrew, the professor already decided), so
+  /// nothing is written and the caller gets [LessonChanged]. Run as a transaction so that the database's
+  /// "one confirmed lesson per slot" refusal (23505) comes back as [SlotTaken], not as a 500.
   @override
-  Future<Result<Lesson>> save(Lesson lesson, {required LessonStatus from}) =>
-      throw UnimplementedError('Part 5: the conditional UPDATE');
+  Future<Result<Lesson>> save(Lesson lesson, {required LessonStatus from}) => _database.transaction((tx) async {
+    if (!await _writeStatus(tx, lesson, from: from)) {
+      return const Failure(LessonChanged());
+    }
+    return Success(lesson);
+  });
 
+  /// The confirmation and its auto-rejections commit together or not at all.
+  ///
+  /// 1. Lock every request for the slot, in id order. A second confirmation of the same slot waits on this
+  ///    line until the first one commits. Without it, two confirmations could each hold a row the other one
+  ///    needs (deadlock, which Postgres ends by killing one of them).
+  /// 2. Confirm, if still pending. If not, nothing is written: [LessonChanged].
+  /// 3. Reject each competitor that is still pending. One that is not (the student withdrew in the meantime)
+  ///    is skipped and left out of the returned list.
+  ///
+  /// A second confirmed lesson for the slot is refused by the unique index (23505): [SlotTaken], all rolled back.
   @override
-  Future<Result<Confirmation>> saveConfirmation(Confirmation confirmation) =>
-      throw UnimplementedError('Part 5: the confirmation transaction');
+  Future<Result<Confirmation>> saveConfirmation(Confirmation confirmation) => _database.transaction((tx) async {
+    final confirmed = confirmation.confirmed;
+    await tx.execute(
+      Sql.named('SELECT id FROM lessons WHERE slot_id = @slot ORDER BY id FOR UPDATE'),
+      parameters: {'slot': confirmed.slotId.value},
+    );
+
+    if (!await _writeStatus(tx, confirmed, from: const Pending())) {
+      return const Failure(LessonChanged());
+    }
+
+    final rejected = <Lesson>[];
+    for (final other in confirmation.rejected) {
+      if (await _writeStatus(tx, other, from: const Pending())) {
+        rejected.add(other);
+      }
+    }
+    return Success(Confirmation(confirmed: confirmed, rejected: rejected));
+  });
+
+  /// The conditional UPDATE both writes use. True if the row changed, false if its status was no longer [from].
+  Future<bool> _writeStatus(Session db, Lesson lesson, {required LessonStatus from}) async {
+    final changed = await db.execute(
+      Sql.named('''
+        UPDATE lessons
+        SET status = @status, status_at = @status_at:timestamptz, rejection_cause = @rejection_cause,
+            cancelled_by = @cancelled_by, note = @note
+        WHERE id = @id AND status = @from'''),
+      parameters: {...lessonStatusParameters(lesson.status), 'id': lesson.id.value, 'from': lessonStatusNameOf(from)},
+    );
+    return changed.affectedRows == 1;
+  }
 }

@@ -11,11 +11,16 @@ import 'support/fixture.dart';
 import 'support/test_database.dart';
 
 const ana = User(id: UserId('ana'), name: 'Ana Jovanović', role: Role.student);
+const nikola = User(id: UserId('nikola'), name: 'Nikola Ilić', role: Role.student);
+const marija = User(id: UserId('marija'), name: 'Marija Stojanović', role: Role.student);
+const milica = User(id: UserId('milica'), name: 'Milica Petrović', role: Role.professor);
 
-/// Two weeks before slot s-1, so a request for it passes the 24 h rule.
+/// Over a week before every fixture slot, so requests pass the 24 h rule and nothing has started yet.
+final clockNow = DateTime.utc(2026, 11, 19, 12);
+
 final class FixedClock implements Clock {
   @override
-  DateTime now() => DateTime.utc(2026, 11, 19, 12);
+  DateTime now() => clockNow;
 }
 
 void main() {
@@ -126,5 +131,121 @@ void main() {
     await insertLesson(database, 'other-professor', slot: 's-4', status: 'confirmed', statusAt: at);
 
     expect(await lessons.takenSlotsOf(const UserId('milica')), {const SlotId('s-2')});
+  });
+
+  group('writes', () {
+    Future<Lesson> load(String id) async => (await lessons.find(LessonId(id)))!;
+    Future<Object?> statusOf(String id) => column(LessonId(id), 'status');
+
+    /// What Milica's screen would send: a confirmation built from the requests it loaded earlier.
+    Future<Confirmation> confirmationSeenNow(String id) async {
+      final lesson = await load(id);
+      final competing = await lessons.lessonsForSlot(lesson.slotId);
+      return confirmLesson(lesson, by: milica, competing: competing, now: clockNow).valueOrNull!;
+    }
+
+    test('a withdrawal and a rejection by the professor are stored', () async {
+      await insertLesson(database, 'ana-math');
+      await insertLesson(database, 'nikola-math', student: 'nikola');
+
+      final withdrawn = await WithdrawRequest(lessons, FixedClock(), ana)(await load('ana-math'));
+      final refused = await RejectLesson(lessons, FixedClock(), milica)(await load('nikola-math'));
+
+      expect(await load('ana-math'), withdrawn.valueOrNull);
+      expect((await load('ana-math')).status, Cancelled(by: ana.id, at: clockNow));
+      expect(await load('nikola-math'), refused.valueOrNull);
+      expect(await column(const LessonId('nikola-math'), 'rejection_cause'), 'by_professor');
+    });
+
+    test('a held lesson keeps its note', () async {
+      await insertLesson(database, 'ana-exam', slot: 's-3', status: 'confirmed', statusAt: requestedAt);
+      final confirmed = await load('ana-exam');
+      final held = confirmed.copyWith(
+        status: Held(at: DateTime.utc(2026, 11, 30, 17, 30), note: LessonNote.parse('Integrali i redovi.').valueOrNull),
+      );
+
+      expect(await lessons.save(held, from: confirmed.status), Success(held));
+      expect(await load('ana-exam'), held);
+    });
+
+    test('a write from a stale status is LessonChanged and changes nothing', () async {
+      await insertLesson(database, 'ana-math');
+      final seenByMilica = await load('ana-math');
+      await WithdrawRequest(lessons, FixedClock(), ana)(await load('ana-math'));
+
+      final result = await RejectLesson(lessons, FixedClock(), milica)(seenByMilica);
+
+      expect(result, const Failure<Lesson>(LessonChanged()));
+      expect((await load('ana-math')).status, Cancelled(by: ana.id, at: clockNow));
+    });
+
+    test('a save that would confirm a second lesson for one slot is SlotTaken', () async {
+      await insertLesson(database, 'ana-math', status: 'confirmed', statusAt: requestedAt);
+      await insertLesson(database, 'nikola-math', student: 'nikola');
+      final pending = await load('nikola-math');
+
+      final result = await lessons.save(
+        pending.copyWith(status: Confirmed(at: clockNow)),
+        from: const Pending(),
+      );
+
+      expect(result, const Failure<Lesson>(SlotTaken()));
+      expect(await statusOf('nikola-math'), 'pending');
+    });
+
+    test('a confirmation confirms one request and rejects the other requests for that slot', () async {
+      await insertLesson(database, 'ana-math');
+      await insertLesson(database, 'nikola-math', student: 'nikola');
+      await insertLesson(database, 'marija-math', student: 'marija');
+      await insertLesson(database, 'ana-later', slot: 's-2');
+
+      final result = await ConfirmLesson(lessons, FixedClock(), milica)(await load('ana-math'));
+
+      final confirmation = result.valueOrNull!;
+      expect(await load('ana-math'), confirmation.confirmed);
+      expect(idsOf(confirmation.rejected), ['marija-math', 'nikola-math']);
+      expect((await load('nikola-math')).status, Rejected(cause: RejectionCause.slotTaken, at: clockNow));
+      expect((await load('marija-math')).status, Rejected(cause: RejectionCause.slotTaken, at: clockNow));
+      expect(await statusOf('ana-later'), 'pending');
+    });
+
+    test('a student who withdrew in the meantime is skipped and left out of the result', () async {
+      await insertLesson(database, 'ana-math');
+      await insertLesson(database, 'nikola-math', student: 'nikola');
+      await insertLesson(database, 'marija-math', student: 'marija');
+      final confirmation = await confirmationSeenNow('ana-math');
+      await WithdrawRequest(lessons, FixedClock(), marija)(await load('marija-math'));
+
+      final result = await lessons.saveConfirmation(confirmation);
+
+      expect(idsOf(result.valueOrNull!.rejected), ['nikola-math']);
+      expect((await load('marija-math')).status, Cancelled(by: marija.id, at: clockNow));
+    });
+
+    test('confirming a second lesson for a taken slot is SlotTaken, and nothing is written', () async {
+      await insertLesson(database, 'ana-math');
+      await insertLesson(database, 'marija-math', student: 'marija');
+      final confirmation = await confirmationSeenNow('ana-math');
+      // The database is the last line: however Nikola's lesson got confirmed, a second one never commits.
+      await insertLesson(database, 'nikola-math', student: 'nikola', status: 'confirmed', statusAt: clockNow);
+
+      final result = await lessons.saveConfirmation(confirmation);
+
+      expect(result, const Failure<Confirmation>(SlotTaken()));
+      expect(await statusOf('ana-math'), 'pending');
+      expect(await statusOf('marija-math'), 'pending');
+    });
+
+    test('when the lesson to confirm is no longer pending, it is LessonChanged, and nothing is written', () async {
+      await insertLesson(database, 'ana-math');
+      await insertLesson(database, 'nikola-math', student: 'nikola');
+      final confirmation = await confirmationSeenNow('ana-math');
+      await WithdrawRequest(lessons, FixedClock(), ana)(await load('ana-math'));
+
+      final result = await lessons.saveConfirmation(confirmation);
+
+      expect(result, const Failure<Confirmation>(LessonChanged()));
+      expect(await statusOf('nikola-math'), 'pending');
+    });
   });
 }
