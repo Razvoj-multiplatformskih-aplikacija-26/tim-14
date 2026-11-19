@@ -4,3 +4,4 @@ export 'src/database.dart';
 export 'src/env_file.dart';
 export 'src/passwords.dart';
 export 'src/postgres_professors.dart';
+export 'src/postgres_verifications.dart';

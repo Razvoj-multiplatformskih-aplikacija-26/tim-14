@@ -63,6 +63,15 @@ ProfessorProfile profileFromRow(ResultRow row) {
   );
 }
 
+/// The `verification` column's value for each state, as the migration's CHECK allows. A switch over a sealed
+/// class: a new state would not compile until it gets a name here.
+String verificationNameOf(VerificationStatus status) => switch (status) {
+  NotVerified() => 'not_verified',
+  AwaitingReview() => 'awaiting_review',
+  Verified() => 'verified',
+  VerificationRejected() => 'rejected',
+};
+
 /// The `verification` column says which state. The other columns hold that state's fields.
 VerificationStatus _verificationFromColumns(Map<String, dynamic> column) {
   final status = column['verification'] as String;
