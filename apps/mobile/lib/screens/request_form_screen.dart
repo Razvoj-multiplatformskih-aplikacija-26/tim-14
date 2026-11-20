@@ -10,6 +10,7 @@ import '../data/fail_switch.dart';
 import '../text/catalog.dart';
 import '../text/dates.dart';
 import '../text/domain_errors.dart';
+import '../text/failures.dart';
 
 class RequestFormScreen extends StatelessWidget {
   const RequestFormScreen({super.key, required this.professorId, required this.slotId, required this.failSwitch});
@@ -60,10 +61,10 @@ class _RequestFormView extends StatelessWidget {
           switch (state) {
             case RequestFormLoading():
               return const Center(child: CircularProgressIndicator());
-            case RequestFormLoadFailure():
+            case RequestFormLoadFailure(:final failure):
               return _Message(
                 icon: Icons.wifi_off,
-                text: 'Termin trenutno ne može da se učita.',
+                text: 'Termin trenutno ne može da se učita. ${failure.message}',
                 buttonText: 'Pokušaj ponovo',
                 onPressed: () => context.read<RequestFormBloc>().add(RequestFormStarted()),
               );
@@ -106,7 +107,7 @@ class _Form extends StatelessWidget {
     if (state.submitError != null) {
       errorText = state.submitError!.message;
     } else if (state.networkError != null) {
-      errorText = 'Zahtev nije poslat, proveri mrežu i pokušaj ponovo.';
+      errorText = 'Zahtev nije poslat. ${state.networkError!.message}';
     }
 
     return ListView(

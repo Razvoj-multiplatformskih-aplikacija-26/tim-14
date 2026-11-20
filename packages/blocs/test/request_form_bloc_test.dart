@@ -69,7 +69,7 @@ void main() {
       return buildBloc();
     },
     act: (bloc) => bloc.add(RequestFormStarted()),
-    expect: () => [const RequestFormLoading(), const RequestFormLoadFailure('Nema mreže')],
+    expect: () => [const RequestFormLoading(), const RequestFormLoadFailure(RepositoryFailure.unavailable)],
   );
 
   blocTest<RequestFormBloc, RequestFormState>(
@@ -141,6 +141,34 @@ void main() {
     ],
   );
 
+  // Kasni klijent: dok je forma bila otvorena, profesor je potvrdio zahtev drugog učenika za isti termin.
+  blocTest<RequestFormBloc, RequestFormState>(
+    'a slot taken meanwhile by another student moves the form to slot-gone',
+    setUp: () => lessons.lessons.add(
+      Lesson(
+        id: const LessonId('other'),
+        slotId: slot.id,
+        listingId: mathListing.id,
+        professorId: milica.id,
+        professorName: milica.fullName,
+        studentId: const UserId('marko'),
+        studentName: 'Marko',
+        start: slot.start,
+        duration: slot.duration,
+        message: message,
+        createdAt: now,
+        status: Confirmed(at: now),
+      ),
+    ),
+    build: buildBloc,
+    seed: () => ready,
+    act: (bloc) => bloc
+      ..add(MessageChanged('Zdravo'))
+      ..add(RequestSubmitted()),
+    skip: 2,
+    expect: () => [const RequestFormSlotGone()],
+  );
+
   blocTest<RequestFormBloc, RequestFormState>(
     'a network error while sending keeps the message',
     build: buildBloc,
@@ -154,7 +182,7 @@ void main() {
     skip: 2,
     expect: () => [
       isA<RequestFormReady>()
-          .having((state) => state.networkError, 'networkError', 'Nema mreže')
+          .having((state) => state.networkError, 'networkError', RepositoryFailure.unavailable)
           .having((state) => state.message, 'message', 'Zdravo'),
     ],
   );

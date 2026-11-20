@@ -40,7 +40,7 @@ class RequestFormBloc extends Bloc<RequestFormEvent, RequestFormState> {
       final listing = page.listings.firstWhere((listing) => listing.id == listingId);
       emit(RequestFormReady(profile: page.profile, listing: listing, slot: slot));
     } on RepositoryException catch (e) {
-      emit(RequestFormLoadFailure(e.message));
+      emit(RequestFormLoadFailure(e.failure));
     }
   }
 
@@ -93,6 +93,9 @@ class RequestFormBloc extends Bloc<RequestFormEvent, RequestFormState> {
       switch (result) {
         case Success(:final value):
           emit(RequestFormSent(value));
+        // Server je javio da je termin u međuvremenu zauzet: forma više nema šta da pošalje.
+        case Failure(error: SlotTaken()):
+          emit(const RequestFormSlotGone());
         case Failure(:final error):
           emit(
             RequestFormReady(
@@ -113,7 +116,7 @@ class RequestFormBloc extends Bloc<RequestFormEvent, RequestFormState> {
           slot: current.slot,
           message: current.message,
           messageLength: current.messageLength,
-          networkError: e.message,
+          networkError: e.failure,
         ),
       );
     }

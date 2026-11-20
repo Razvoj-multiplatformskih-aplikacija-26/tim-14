@@ -8,7 +8,8 @@ class FailSwitch {
   void check() {
     if (failNext) {
       failNext = false;
-      throw const RepositoryException('Simulirana greška');
+      // Kao prava greška veze, pa ekran pokaže isti tekst kao kad server ne radi.
+      throw const RepositoryException('Simulirana greška', failure: RepositoryFailure.unreachable);
     }
   }
 }

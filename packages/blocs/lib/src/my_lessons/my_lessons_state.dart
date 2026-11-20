@@ -1,5 +1,8 @@
 import 'package:domain/domain.dart';
 import 'package:equatable/equatable.dart';
+import 'package:use_cases/use_cases.dart';
+
+import '../action_notice.dart';
 
 enum LessonAction { withdraw, cancel, none }
 
@@ -32,13 +35,14 @@ class MyLessonsLoading extends MyLessonsState {
   const MyLessonsLoading();
 }
 
+// Časovi nisu učitani. Nosi samo vrstu greške, a tekst za ekran pravi aplikacija.
 class MyLessonsFailure extends MyLessonsState {
-  const MyLessonsFailure(this.message);
+  const MyLessonsFailure(this.failure);
 
-  final String message;
+  final RepositoryFailure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class MyLessonsEmpty extends MyLessonsState {
@@ -46,12 +50,13 @@ class MyLessonsEmpty extends MyLessonsState {
 }
 
 class MyLessonsLoaded extends MyLessonsState {
-  const MyLessonsLoaded(this.items, {this.actionError});
+  const MyLessonsLoaded(this.items, {this.notice});
 
   final List<LessonItem> items;
 
-  // Greška poslednje akcije, ekran je prikaže kao SnackBar.
-  final DomainError? actionError;
+  // Ishod poslednje akcije koji ekran prikaže kao SnackBar: pravilo koje nije prošlo (i u aplikaciji i na
+  // serveru) ili akcija koja nije stigla do servera. Lista ostaje na ekranu u oba slučaja.
+  final ActionNotice? notice;
 
   // Grupe za ekran: potvrđeni su predstojeći, na čekanju čekaju profesora, ostalo je istorija.
   // Grupiše se po stanju, ne po vremenu: otkazan čas za tri dana je završen, pa je u istoriji.
@@ -67,5 +72,5 @@ class MyLessonsLoaded extends MyLessonsState {
       .toList();
 
   @override
-  List<Object?> get props => [items, actionError];
+  List<Object?> get props => [items, notice];
 }
