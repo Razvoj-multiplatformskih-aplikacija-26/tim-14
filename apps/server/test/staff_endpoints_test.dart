@@ -8,11 +8,23 @@ import 'package:http/http.dart' as http;
 import 'package:postgres/postgres.dart' show Sql;
 import 'package:relic/relic.dart' show IOAdapter, RelicServer;
 import 'package:server/server.dart';
+import 'package:domain/domain.dart';
 import 'package:test/test.dart';
 import 'package:use_cases/use_cases.dart' show Clock;
 
 import 'support/fixture.dart';
 import 'support/test_database.dart';
+import 'support/unused.dart';
+
+/// The users of the fixture, by id, so a test can call as one of them.
+const fixtureUsers = {
+  'jovana': User(id: UserId('jovana'), name: 'Jovana Admin', role: Role.admin),
+  'milica': User(id: UserId('milica'), name: 'Milica Petrović', role: Role.professor),
+  'jovan': User(id: UserId('jovan'), name: 'Jovan Marković', role: Role.professor),
+  'ana': User(id: UserId('ana'), name: 'Ana Jovanović', role: Role.student),
+  'nikola': User(id: UserId('nikola'), name: 'Nikola Ilić', role: Role.student),
+  'marija': User(id: UserId('marija'), name: 'Marija Stojanović', role: Role.student),
+};
 
 /// Over a week before every fixture slot: nothing has started yet.
 final beforeEverything = DateTime.utc(2026, 11, 19, 12);
@@ -35,6 +47,7 @@ void main() {
   late RelicServer server;
   late Uri base;
   final clock = TestClock();
+  final sessions = testSessions();
 
   setUpAll(() async {
     database = await createTestDatabase();
@@ -44,7 +57,7 @@ void main() {
         corsOrigins: const [],
         lessons: PostgresLessons(database),
         verifications: PostgresVerifications(database),
-        findUser: findUserIn(database),
+        sessions: sessions,
         clock: clock,
       ),
     );
@@ -60,9 +73,16 @@ void main() {
     await database.close();
   });
 
-  /// [as] is the caller's user id, sent the way the stand-in login reads it: `Authorization: Bearer <id>`.
+  /// A user of the fixture gets a token the server signed, the way the login issues it. Any other id gets a token
+  /// the server never signed.
+  String tokenFor(String id) => switch (fixtureUsers[id]) {
+    final user? => sessions.issue(user),
+    null => 'not-a-token-the-server-signed',
+  };
+
+  /// [as] is the caller's user id; the request carries `Authorization: Bearer <token>`.
   Map<String, String> headersFor(String? as, {bool json = false}) => {
-    'Authorization': ?(as == null ? null : 'Bearer $as'),
+    'Authorization': ?(as == null ? null : 'Bearer ${tokenFor(as)}'),
     if (json) 'Content-Type': 'application/json',
   };
 
@@ -109,10 +129,12 @@ void main() {
       expect(await storedStatus('l-ana'), 'pending');
     });
 
-    test('a token of a user who does not exist is 401', () async {
+    test('a token the server did not sign is 401 session-expired, and the handler never runs', () async {
       final response = await post('/lessons/l-ana/confirmation', as: 'nobody');
 
       expect(response.statusCode, 401);
+      expect(bodyOf(response)['code'], 'session-expired');
+      expect(await storedStatus('l-ana'), 'pending');
     });
 
     test('the verification routes need it too', () async {

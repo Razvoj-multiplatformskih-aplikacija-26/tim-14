@@ -19,7 +19,12 @@ Future<void> main() async {
       corsOrigins: config.corsOrigins,
       lessons: PostgresLessons(database),
       verifications: PostgresVerifications(database),
-      findUser: findUserIn(database),
+      sessions: SessionHandlers(
+        accounts: PostgresAccountStore(database),
+        secret: config.jwtSecret,
+        ttl: config.sessionTtl,
+        secureCookie: config.secureCookie,
+      ),
     ),
   );
   stdout.writeln('Server on http://${config.host}:${config.port}');
