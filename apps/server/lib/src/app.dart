@@ -24,17 +24,17 @@ Handler buildHandler({
   final staff = StaffHandlers(lessons, verifications, clock);
   final router = RelicRouter()
     ..get(ApiPaths.health, (request) => Response.ok(body: Body.fromString('ok')))
-    // Staff (D6). The paths move into ApiPaths when Ilija's I2 adds them.
-    ..post('/lessons/:id/confirmation', staff.confirm)
-    ..post('/lessons/:id/rejection', staff.reject)
-    ..post('/lessons/:id/held', staff.held)
-    ..post('/lessons/:id/no-show', staff.noShow)
-    ..get('/verifications', staff.verificationQueue)
-    ..post('/verifications/:id/approval', staff.approve)
-    ..post('/verifications/:id/rejection', staff.rejectProfessor)
+    // Staff (D6)
+    ..post(ApiPaths.confirmation(':id'), staff.confirm)
+    ..post(ApiPaths.rejection(':id'), staff.reject)
+    ..post(ApiPaths.held(':id'), staff.held)
+    ..post(ApiPaths.noShow(':id'), staff.noShow)
+    ..get(ApiPaths.verifications, staff.verificationQueue)
+    ..post(ApiPaths.approval(':id'), staff.approve)
+    ..post(ApiPaths.verificationRejection(':id'), staff.rejectProfessor)
     // Every route under these two prefixes needs a caller, Ilija's student routes included.
-    ..use('/lessons', signedIn(findUser))
-    ..use('/verifications', signedIn(findUser))
+    ..use(ApiPaths.lessons, signedIn(findUser))
+    ..use(ApiPaths.verifications, signedIn(findUser))
     ..fallback = respondWith((request) => problemResponse(notFoundRoute));
   return const Pipeline()
       .addMiddleware(logRequests())
