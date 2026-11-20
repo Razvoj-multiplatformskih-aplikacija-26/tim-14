@@ -53,6 +53,8 @@ class _VerificationPageState extends State<VerificationPage> {
   void _showNotice(BuildContext context, VerificationQueueState state) {
     final notice = state is VerificationQueueLoaded ? state.notice : null;
     if (notice == null) return;
+    // Istekla prijava nije za SnackBar: ruter već vodi na prijavu, a tamo piše isto.
+    if (notice is ActionFailed && notice.failure == RepositoryFailure.sessionExpired) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(notice.message)));

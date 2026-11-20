@@ -9,9 +9,9 @@ const _narrowBelow = 900.0;
 
 // Okvir oko svakog dela: sidebar levo, izabrani deo desno. Na uskom prozoru sidebar je u fioki iza ☰ u gornjoj traci.
 class AppShell extends StatelessWidget {
-  const AppShell({super.key, required this.session, required this.location, required this.child});
+  const AppShell({super.key, required this.user, required this.location, required this.child});
 
-  final ValueNotifier<User> session;
+  final User user;
   final String location;
   final Widget child;
 
@@ -38,13 +38,13 @@ class AppShell extends StatelessWidget {
               ? Drawer(
                   width: 248,
                   shape: const RoundedRectangleBorder(),
-                  child: Sidebar(session: session, location: location),
+                  child: Sidebar(user: user, location: location),
                 )
               : null,
           body: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!narrow) Sidebar(session: session, location: location),
+              if (!narrow) Sidebar(user: user, location: location),
               Expanded(child: child),
             ],
           ),

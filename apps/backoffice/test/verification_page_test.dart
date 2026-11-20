@@ -1,9 +1,6 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/demo_data.dart';
 import 'package:backoffice/data/fail_switch.dart';
-import 'package:backoffice/data/fake_lesson_repository.dart';
 import 'package:backoffice/data/fake_verification_repository.dart';
-import 'package:backoffice/router.dart';
 import 'package:backoffice/text/domain_errors.dart';
 import 'package:backoffice/verification/profile_detail.dart';
 import 'package:backoffice/verification/verification_list.dart';
@@ -24,16 +21,7 @@ void main() {
 
   // Ulogovan je administrator, pa ruter odmah otvara Verifikaciju. Bez pumpAndSettle, da se vidi i učitavanje.
   Future<void> pumpApp(WidgetTester tester, {VerificationRepository? verifications}) async {
-    final now = DateTime.now();
-    await tester.pumpWidget(
-      BackofficeApp(
-        failSwitch: failSwitch,
-        lessons: FakeLessonRepository(demoLessons(now), failSwitch, delay: Duration.zero),
-        verifications:
-            verifications ?? FakeVerificationRepository(demoProfessors(now), failSwitch, delay: Duration.zero),
-        router: createRouter(ValueNotifier<User>(admin)),
-      ),
-    );
+    await pumpBackoffice(tester, fakeDependencies(signedIn: admin, failSwitch: failSwitch, verifications: verifications));
   }
 
   Finder inTable(String text) => find.descendant(of: find.byType(VerificationTable), matching: find.text(text));

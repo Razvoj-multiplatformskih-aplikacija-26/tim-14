@@ -1,12 +1,9 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/demo_data.dart';
 import 'package:backoffice/data/fail_switch.dart';
-import 'package:backoffice/data/fake_lesson_repository.dart';
-import 'package:backoffice/data/fake_verification_repository.dart';
 import 'package:backoffice/lessons/lesson_queue_page.dart';
-import 'package:backoffice/lessons/queue_table.dart';
 import 'package:backoffice/router.dart';
 import 'package:backoffice/shell/sidebar.dart';
+import 'package:backoffice/verification/verification_page.dart';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
@@ -20,23 +17,12 @@ void main() {
   late FailSwitch failSwitch;
   late GoRouter router;
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  Future<void> pumpApp(WidgetTester tester, {User user = milica}) async {
     useDesktopSize(tester);
-    final now = DateTime.now();
     failSwitch = FailSwitch();
-    router = createRouter(ValueNotifier<User>(milica));
-    await tester.pumpWidget(
-      BackofficeApp(
-        failSwitch: failSwitch,
-        lessons: FakeLessonRepository(demoLessons(now), failSwitch, delay: Duration.zero),
-        verifications: FakeVerificationRepository(demoProfessors(now), failSwitch, delay: Duration.zero),
-        router: router,
-      ),
-    );
+    router = await pumpBackoffice(tester, fakeDependencies(signedIn: user, failSwitch: failSwitch));
     await tester.pumpAndSettle();
   }
-
-  String location() => router.routerDelegate.currentConfiguration.uri.path;
 
   // Naslov strane i stavka sidebara imaju isti tekst, pa se stavka traži samo u sidebaru.
   Finder navItem(String label) => find.descendant(of: find.byType(Sidebar), matching: find.text(label));
@@ -51,51 +37,29 @@ void main() {
   testWidgets('starts on Časovi as the professor', (tester) async {
     await pumpApp(tester);
 
-    expect(location(), Routes.lessons);
+    expect(locationOf(router), Routes.lessons);
     expect(navItem('Časovi'), findsOneWidget);
     expect(navItem('Verifikacija'), findsNothing);
     expect(find.text(milica.name), findsOneWidget);
   });
 
-  testWidgets('switching to the admin opens Verifikacija and hides Časovi', (tester) async {
-    await pumpApp(tester);
+  testWidgets('the admin starts on Verifikacija and does not see Časovi', (tester) async {
+    await pumpApp(tester, user: admin);
 
-    await openMenuAndTap(tester, find.textContaining('Pređi na'));
-
-    expect(location(), Routes.verification);
+    expect(locationOf(router), Routes.verification);
     expect(navItem('Verifikacija'), findsOneWidget);
     expect(navItem('Časovi'), findsNothing);
     expect(find.text(admin.name), findsOneWidget);
   });
 
-  testWidgets('coming back to Časovi refreshes the list in place', (tester) async {
-    await pumpApp(tester);
-    await openMenuAndTap(tester, find.textContaining('Pređi na'));
-    failSwitch.failNext = true;
-
-    // Nazad na Milicu: Časovi se otvaraju ponovo, a Bloc već ima listu, pa je osveži bez spinera.
-    await tester.tap(find.text(admin.name));
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Pređi na'));
-    await tester.pumpAndSettle();
-
-    expect(location(), Routes.lessons);
-    // Osvežavanje je stiglo do repozitorijuma (potrošilo je grešku), a lista je ostala na ekranu.
-    expect(failSwitch.failNext, isFalse);
-    expect(find.byType(QueueTable), findsOneWidget);
-    expect(find.text('Podaci trenutno nisu dostupni. Pokušaj ponovo.'), findsOneWidget);
-  });
-
-  testWidgets('a professor is sent back from the admin URL and from an unknown one', (tester) async {
+  testWidgets('a professor is sent back from the admin URL, the login URL and an unknown one', (tester) async {
     await pumpApp(tester);
 
-    router.go(Routes.verification);
-    await tester.pumpAndSettle();
-    expect(location(), Routes.lessons);
-
-    router.go('/nepostoji');
-    await tester.pumpAndSettle();
-    expect(location(), Routes.lessons);
+    for (final address in [Routes.verification, Routes.login, '/nepostoji']) {
+      router.go(address);
+      await tester.pumpAndSettle();
+      expect(locationOf(router), Routes.lessons, reason: address);
+    }
   });
 
   testWidgets('Simuliraj grešku arms the fail switch and says so', (tester) async {
@@ -131,18 +95,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Sidebar), findsNothing);
-    expect(location(), Routes.lessons);
+    expect(locationOf(router), Routes.lessons);
   });
 
-  testWidgets('both Blocs are provided and load from the fake repositories', (tester) async {
+  // Svaka uloga dobija samo Bloc za svoj deo. Tuđi Bloc ne postoji, pa ne može ni da se pročita.
+  testWidgets('the professor gets only the lesson queue Bloc', (tester) async {
     await pumpApp(tester);
     final context = tester.element(find.byType(LessonQueuePage));
 
-    final lessons = context.read<LessonQueueBloc>();
-    final verification = context.read<VerificationQueueBloc>();
-    await tester.pumpAndSettle();
+    expect(context.read<LessonQueueBloc>().state, isA<LessonQueueLoaded>());
+    expect(() => context.read<VerificationQueueBloc>(), throwsA(isA<Exception>()));
+  });
 
-    expect(lessons.state, isA<LessonQueueLoaded>());
-    expect(verification.state, isA<VerificationQueueLoaded>());
+  testWidgets('the admin gets only the verification queue Bloc', (tester) async {
+    await pumpApp(tester, user: admin);
+    final context = tester.element(find.byType(VerificationPage));
+
+    expect(context.read<VerificationQueueBloc>().state, isA<VerificationQueueLoaded>());
+    expect(() => context.read<LessonQueueBloc>(), throwsA(isA<Exception>()));
   });
 }

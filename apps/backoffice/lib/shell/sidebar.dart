@@ -16,9 +16,9 @@ const _items = <_NavItem>[
 
 // Figma: Panel/Sidebar.
 class Sidebar extends StatelessWidget {
-  const Sidebar({super.key, required this.session, required this.location});
+  const Sidebar({super.key, required this.user, required this.location});
 
-  final ValueNotifier<User> session;
+  final User user;
   final String location;
 
   @override
@@ -35,19 +35,16 @@ class Sidebar extends StatelessWidget {
         spacing: AppSpacing.px8,
         children: [
           const _Brand(),
-          ValueListenableBuilder(
-            valueListenable: session,
-            builder: (context, user, _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: AppSpacing.px4,
-              children: [
-                for (final item in _items)
-                  if (item.role == user.role) _NavTile(item: item, selected: location == item.path),
-              ],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: AppSpacing.px4,
+            children: [
+              for (final item in _items)
+                if (item.role == user.role) _NavTile(item: item, selected: location == item.path),
+            ],
           ),
           const Spacer(),
-          UserMenu(session: session),
+          UserMenu(user: user),
         ],
       ),
     );

@@ -34,6 +34,7 @@ final class BackofficeDependencies {
   factory BackofficeDependencies.fake(DateTime now, {Duration delay = const Duration(milliseconds: 800)}) {
     final failSwitch = FailSwitch();
     return BackofficeDependencies(
+      // Za prazan ekran na odbrani ovo se zameni sa const EmptyLessonRepository().
       lessons: FakeLessonRepository(demoLessons(now), failSwitch, delay: delay),
       verifications: FakeVerificationRepository(demoProfessors(now), failSwitch, delay: delay),
       sessions: FakeSessionRepository(failSwitch, delay: delay ~/ 2),

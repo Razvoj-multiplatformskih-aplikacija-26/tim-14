@@ -1,14 +1,8 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/demo_data.dart';
-import 'package:backoffice/data/fail_switch.dart';
-import 'package:backoffice/data/fake_lesson_repository.dart';
-import 'package:backoffice/data/fake_verification_repository.dart';
 import 'package:backoffice/lessons/lesson_detail.dart';
 import 'package:backoffice/lessons/queue_list.dart';
 import 'package:backoffice/lessons/queue_table.dart';
-import 'package:backoffice/router.dart';
 import 'package:blocs/blocs.dart';
-import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,16 +14,7 @@ import 'helpers.dart';
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
     useNarrowSize(tester);
-    final now = DateTime.now();
-    final failSwitch = FailSwitch();
-    await tester.pumpWidget(
-      BackofficeApp(
-        failSwitch: failSwitch,
-        lessons: FakeLessonRepository(demoLessons(now), failSwitch, delay: Duration.zero),
-        verifications: FakeVerificationRepository(demoProfessors(now), failSwitch, delay: Duration.zero),
-        router: createRouter(ValueNotifier<User>(milica)),
-      ),
-    );
+    await pumpBackoffice(tester, fakeDependencies());
     await tester.pumpAndSettle();
   }
 

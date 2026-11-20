@@ -1,65 +1,54 @@
+import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ui/ui.dart';
 
-import '../data/demo_data.dart';
 import '../data/fail_switch.dart';
+import '../dependencies.dart';
 
-enum _MenuAction { switchUser, simulateError }
+enum _MenuAction { simulateError, logOut }
 
-// Figma: account u dnu sidebara. Do prijave u KT2 ovde se bira ko je ulogovan.
+// Figma: account u dnu sidebara. Pokazuje ko je prijavljen i nudi odjavu.
 class UserMenu extends StatelessWidget {
-  const UserMenu({super.key, required this.session});
+  const UserMenu({super.key, required this.user});
 
-  final ValueNotifier<User> session;
+  final User user;
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: session,
-      builder: (context, user, _) {
-        final other = user == milica ? admin : milica;
-        // Material nosi pozadinu, da bi se talas od klika video preko nje.
-        return Material(
-          color: AppExtraColors.of(context).muted,
-          borderRadius: const BorderRadius.all(Radius.circular(AppRadius.md)),
-          clipBehavior: Clip.antiAlias,
-          child: PopupMenuButton<_MenuAction>(
-            tooltip: 'Nalog',
-            onSelected: (action) => _onSelected(context, action, other),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: _MenuAction.switchUser,
-                child: Text('Pređi na: ${other.name} (${_roleLabel(other.role)})'),
-              ),
-              const PopupMenuItem(value: _MenuAction.simulateError, child: Text('Simuliraj grešku')),
-            ],
-            child: _Account(user: user),
-          ),
-        );
-      },
+    final failSwitch = context.read<BackofficeDependencies>().failSwitch;
+    // Material nosi pozadinu, da bi se talas od klika video preko nje.
+    return Material(
+      color: AppExtraColors.of(context).muted,
+      borderRadius: const BorderRadius.all(Radius.circular(AppRadius.md)),
+      clipBehavior: Clip.antiAlias,
+      child: PopupMenuButton<_MenuAction>(
+        tooltip: 'Nalog',
+        onSelected: (action) => _onSelected(context, action, failSwitch),
+        itemBuilder: (context) => [
+          // Samo uz lažne podatke. Pravi server ne može da se natera da pogreši, njega gasi docker compose stop.
+          if (failSwitch != null)
+            const PopupMenuItem(value: _MenuAction.simulateError, child: Text('Simuliraj grešku')),
+          const PopupMenuItem(value: _MenuAction.logOut, child: Text('Odjava')),
+        ],
+        child: _Account(user: user),
+      ),
     );
   }
 
-  void _onSelected(BuildContext context, _MenuAction action, User other) {
+  void _onSelected(BuildContext context, _MenuAction action, FailSwitch? failSwitch) {
     switch (action) {
-      case _MenuAction.switchUser:
-        // Ruter sluša session, pa sam prelazi na deo nove uloge.
-        session.value = other;
       case _MenuAction.simulateError:
+        failSwitch?.failNext = true;
         // Na ekranu se ništa ne menja dok repozitorijum ne bude pozvan, zato poruka.
-        context.read<FailSwitch>().failNext = true;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sledeći zahtev će vratiti grešku.')));
+      case _MenuAction.logOut:
+        // Ruter sluša SessionBloc, pa sam prelazi na prijavu. Blocovi ovog korisnika se tada zatvore.
+        context.read<SessionBloc>().add(const SessionLogOutRequested());
     }
   }
 }
-
-String _roleLabel(Role role) => switch (role) {
-  Role.student => 'učenik',
-  Role.professor => 'profesor',
-  Role.admin => 'administrator',
-};
 
 class _Account extends StatelessWidget {
   const _Account({required this.user});
