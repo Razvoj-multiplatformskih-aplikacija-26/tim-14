@@ -25,6 +25,14 @@ class ProfessorPageBloc extends Bloc<ProfessorPageEvent, ProfessorPageState> {
 
   // Sa stranicom na ekranu se osvežava tiho. Ako server ne odgovori, stranica ostaje, a ekran kaže zašto.
   Future<void> _onRefreshed(ProfessorPageRefreshed event, Emitter<ProfessorPageState> emit) async {
+    try {
+      await _refresh(emit);
+    } finally {
+      event.done?.complete();
+    }
+  }
+
+  Future<void> _refresh(Emitter<ProfessorPageState> emit) async {
     final current = state;
     if (current is! ProfessorPageLoaded) {
       await _load(emit);

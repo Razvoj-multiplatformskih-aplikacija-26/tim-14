@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Za poziv servera. Debug verzija ovu dozvolu dobija sama, a release samo odavde. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="Časovi"
         android:name="${applicationName}"

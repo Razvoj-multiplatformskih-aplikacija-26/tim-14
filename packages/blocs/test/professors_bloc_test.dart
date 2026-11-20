@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
@@ -155,13 +157,19 @@ void main() {
       ],
     );
 
+    late Completer<void> done;
+
     blocTest<ProfessorsBloc, ProfessorsState>(
-      'a refresh that cannot reach the server keeps the list and says why',
-      setUp: () => repository = InMemoryProfessorRepository(profiles: many)..fail = true,
+      'a refresh that cannot reach the server keeps the list, says why, and is still done',
+      setUp: () {
+        repository = InMemoryProfessorRepository(profiles: many)..fail = true;
+        done = Completer<void>();
+      },
       build: buildBloc,
       seed: () => ProfessorsLoaded(const [], nextOffset: 20),
-      act: (bloc) => bloc.add(ProfessorsRefreshed()),
+      act: (bloc) => bloc.add(ProfessorsRefreshed(done: done)),
       expect: () => [ProfessorsLoaded(const [], nextOffset: 20, refreshFailure: RepositoryFailure.unavailable)],
+      verify: (_) => expect(done.isCompleted, isTrue),
     );
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:blocs/blocs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,12 +12,13 @@ import '../text/failures.dart';
 import '../widgets/lesson_card.dart';
 
 class MyLessonsScreen extends StatelessWidget {
-  const MyLessonsScreen({super.key, required this.failSwitch});
+  const MyLessonsScreen({super.key, this.failSwitch});
 
-  final FailSwitch failSwitch;
+  // Samo nad demo podacima. Nad serverom grešku pravi pravi server.
+  final FailSwitch? failSwitch;
 
   void _simulateError(BuildContext context) {
-    failSwitch.failNext = true;
+    failSwitch?.failNext = true;
     context.read<MyLessonsBloc>().add(MyLessonsRequested());
   }
 
@@ -25,13 +28,28 @@ class MyLessonsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Moji časovi'),
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (_) => _simulateError(context),
-            itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
+          if (failSwitch != null)
+            PopupMenuButton<String>(
+              onSelected: (_) => _simulateError(context),
+              itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
+            ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Odjava',
+            onPressed: () => context.read<SessionBloc>().add(const SessionLogOutRequested()),
           ),
         ],
       ),
-      body: BlocBuilder<MyLessonsBloc, MyLessonsState>(
+      body: BlocConsumer<MyLessonsBloc, MyLessonsState>(
+        // Osvežavanje ili akcija nisu prošli: lista ostaje, a SnackBar kaže zašto. Kad je preko liste otvoren
+        // detalj časa, poruku pokazuje detalj, pa se ovde preskače da se ne pojavi dvaput.
+        listenWhen: (previous, current) => current is MyLessonsLoaded && shouldShow(current.notice),
+        listener: (context, state) {
+          if (ModalRoute.of(context)?.isCurrent ?? true) {
+            final notice = (state as MyLessonsLoaded).notice!;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(notice.message)));
+          }
+        },
         builder: (context, state) {
           switch (state) {
             case MyLessonsInitial():
@@ -115,13 +133,23 @@ class _LessonList extends StatelessWidget {
     final pending = state.pending;
     final history = state.history;
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.px16),
-      children: [
-        if (upcoming.isNotEmpty) ..._section(context, 'Predstojeći', upcoming),
-        if (pending.isNotEmpty) ..._section(context, 'Na čekanju', pending),
-        if (history.isNotEmpty) ..._section(context, 'Istorija', history),
-      ],
+    // Povuci nadole: tiho ponovno učitavanje, npr. posle potvrde koju je profesor napravio u backoffice-u.
+    return RefreshIndicator(
+      onRefresh: () {
+        final done = Completer<void>();
+        context.read<MyLessonsBloc>().add(MyLessonsRefreshed(done: done));
+        return done.future;
+      },
+      child: ListView(
+        // I kratka lista mora da može da se povuče.
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.px16),
+        children: [
+          if (upcoming.isNotEmpty) ..._section(context, 'Predstojeći', upcoming),
+          if (pending.isNotEmpty) ..._section(context, 'Na čekanju', pending),
+          if (history.isNotEmpty) ..._section(context, 'Istorija', history),
+        ],
+      ),
     );
   }
 

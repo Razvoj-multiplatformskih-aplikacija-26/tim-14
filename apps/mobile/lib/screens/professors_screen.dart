@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:blocs/blocs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,12 +11,13 @@ import '../text/failures.dart';
 import '../widgets/professor_card.dart';
 
 class ProfessorsScreen extends StatelessWidget {
-  const ProfessorsScreen({super.key, required this.failSwitch});
+  const ProfessorsScreen({super.key, this.failSwitch});
 
-  final FailSwitch failSwitch;
+  // Samo nad demo podacima. Nad serverom grešku pravi pravi server.
+  final FailSwitch? failSwitch;
 
   void _simulateError(BuildContext context) {
-    failSwitch.failNext = true;
+    failSwitch?.failNext = true;
     context.read<ProfessorsBloc>().add(ProfessorsRequested());
   }
 
@@ -24,10 +27,11 @@ class ProfessorsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profesori'),
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (_) => _simulateError(context),
-            itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
-          ),
+          if (failSwitch != null)
+            PopupMenuButton<String>(
+              onSelected: (_) => _simulateError(context),
+              itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
+            ),
         ],
       ),
       body: BlocConsumer<ProfessorsBloc, ProfessorsState>(
@@ -86,22 +90,31 @@ class _ProfessorList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final professors = state.professors;
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.px16),
-      itemCount: professors.length + 1,
-      itemBuilder: (context, index) {
-        if (index < professors.length) {
-          final professor = professors[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.px8),
-            child: ProfessorCard(
-              professor: professor,
-              onTap: () => context.go('/profesori/${professor.profile.id.value}'),
-            ),
-          );
-        }
-        return _ListEnd(state: state);
+    // Povuci nadole: lista ponovo od prve strane, tiho.
+    return RefreshIndicator(
+      onRefresh: () {
+        final done = Completer<void>();
+        context.read<ProfessorsBloc>().add(ProfessorsRefreshed(done: done));
+        return done.future;
       },
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.px16),
+        itemCount: professors.length + 1,
+        itemBuilder: (context, index) {
+          if (index < professors.length) {
+            final professor = professors[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.px8),
+              child: ProfessorCard(
+                professor: professor,
+                onTap: () => context.go('/profesori/${professor.profile.id.value}'),
+              ),
+            );
+          }
+          return _ListEnd(state: state);
+        },
+      ),
     );
   }
 }

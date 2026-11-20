@@ -16,6 +16,10 @@ extension RepositoryFailureText on RepositoryFailure {
   };
 }
 
+// Istekla prijava se ne javlja u SnackBar-u: aplikacija ionako prelazi na prijavu, gde piše zašto.
+bool shouldShow(ActionNotice? notice) =>
+    notice != null && notice != const ActionFailed(RepositoryFailure.sessionExpired);
+
 // Tekst za SnackBar posle akcije: pravilo koje nije prošlo, ili akcija koja nije stigla do servera.
 extension ActionNoticeText on ActionNotice {
   String get message => switch (this) {
