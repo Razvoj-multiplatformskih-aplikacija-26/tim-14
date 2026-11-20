@@ -8,6 +8,14 @@ List<Map<String, Object?>> jsonObjects(Map<String, Object?> json, String key) =>
   _ => throw FormatException('Expected "$key" to be a list', json),
 };
 
+List<String> jsonStrings(Map<String, Object?> json, String key) => switch (json[key]) {
+  final List<Object?> list => [
+    for (final item in list)
+      if (item is String) item else throw FormatException('Expected "$key" to be a list of strings', json),
+  ],
+  _ => throw FormatException('Expected "$key" to be a list', json),
+};
+
 String jsonString(Map<String, Object?> json, String key) => switch (json[key]) {
   final String value => value,
   _ => throw FormatException('Expected "$key" to be a string', json),

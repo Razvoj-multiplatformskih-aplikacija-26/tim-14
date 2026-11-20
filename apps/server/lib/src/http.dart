@@ -90,8 +90,8 @@ const unsupportedMediaType = ProblemDto(
 
 const payloadTooLarge = ProblemDto(status: 413, code: ErrorCodes.payloadTooLarge, title: 'Request body too large');
 
-/// 401 for a route that needs a caller and got none. The code becomes `ErrorCodes.signInRequired` once I2 adds it.
-const signInRequired = ProblemDto(status: 401, code: 'sign-in-required', title: 'Sign in first');
+/// 401 for a route that needs a caller and got none.
+const signInRequired = ProblemDto(status: 401, code: ErrorCodes.signInRequired, title: 'Sign in first');
 
 const notFound = ProblemDto(status: 404, code: ErrorCodes.notFound, title: 'Not found');
 
