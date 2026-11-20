@@ -12,12 +12,7 @@ import 'data/secure_token_store.dart';
 // Svi repozitorijumi aplikacije na jednom mestu, kao @Configuration u Springu.
 // Ekrani i Blocovi vide samo portove (LessonRepository, …), pa ne znaju da li ispod radi server ili lažni podaci.
 final class BackofficeDependencies {
-  BackofficeDependencies({
-    required this.lessons,
-    required this.verifications,
-    required this.sessions,
-    this.failSwitch,
-  });
+  BackofficeDependencies({required this.lessons, required this.verifications, required this.sessions, this.failSwitch});
 
   // Pravi rad: sve ide preko jednog ApiClient-a na server.
   factory BackofficeDependencies.server(Uri baseUri) {

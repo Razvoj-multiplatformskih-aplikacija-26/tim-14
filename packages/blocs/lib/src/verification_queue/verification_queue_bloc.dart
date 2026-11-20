@@ -141,7 +141,13 @@ class VerificationQueueBloc extends Bloc<VerificationQueueEvent, VerificationQue
       if (latest is! VerificationQueueLoaded) return;
       emit(_keepSelection(latest, profiles));
     } on RepositoryException catch (e) {
-      _showFailure(emit, e.failure);
+      // Server se ne javlja: stara lista bi izgledala kao da je sve u redu, pa ide ekran „Nema veze sa serverom“
+      // sa dugmetom Pokušaj ponovo. Za ostale greške server je bar odgovorio, pa lista ostaje, a greška ide u SnackBar.
+      if (e.failure == RepositoryFailure.unreachable) {
+        emit(VerificationQueueFailure(e.failure));
+      } else {
+        _showFailure(emit, e.failure);
+      }
     }
   }
 

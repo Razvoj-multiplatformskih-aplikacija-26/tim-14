@@ -350,6 +350,18 @@ void main() {
       ],
     );
 
+    // Ugašen server: umesto stare liste ekran „Nema veze sa serverom“. Pokušaj ponovo je test ispod.
+    blocTest<LessonQueueBloc, LessonQueueState>(
+      'a refresh that cannot reach the server shows the failure instead of the list',
+      setUp: () => repository = InMemoryLessonRepository([first])
+        ..fail = true
+        ..failure = RepositoryFailure.unreachable,
+      build: buildBloc,
+      seed: () => LessonQueueLoaded(rows, tab: QueueTab.pending, selectedId: first.id),
+      act: (bloc) => bloc.add(QueueRefreshed()),
+      expect: () => [const LessonQueueFailure(RepositoryFailure.unreachable)],
+    );
+
     blocTest<LessonQueueBloc, LessonQueueState>(
       'is ignored while the queue is loading',
       setUp: () => repository = InMemoryLessonRepository([first]),

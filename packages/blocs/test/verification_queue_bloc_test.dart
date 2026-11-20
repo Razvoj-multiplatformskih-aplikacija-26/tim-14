@@ -301,6 +301,18 @@ void main() {
       ],
     );
 
+    // Ugašen server: umesto stare liste ekran „Nema veze sa serverom“. Pokušaj ponovo je test ispod.
+    blocTest<VerificationQueueBloc, VerificationQueueState>(
+      'a refresh that cannot reach the server shows the failure instead of the list',
+      setUp: () => repository = InMemoryVerificationRepository([jelena])
+        ..fail = true
+        ..failure = RepositoryFailure.unreachable,
+      build: buildBloc,
+      seed: () => VerificationQueueLoaded([jelena], selectedId: jelena.id),
+      act: (bloc) => bloc.add(VerificationRefreshed()),
+      expect: () => [const VerificationQueueFailure(RepositoryFailure.unreachable)],
+    );
+
     blocTest<VerificationQueueBloc, VerificationQueueState>(
       'is ignored while the queue is loading',
       setUp: () => repository = InMemoryVerificationRepository([jelena]),

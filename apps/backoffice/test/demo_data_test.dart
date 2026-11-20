@@ -29,9 +29,8 @@ void main() {
 
     Lesson byId(String id) => lessons.firstWhere((lesson) => lesson.id == LessonId(id));
 
-    test('every lesson has a student name and a listing title', () {
+    test('every lesson has a listing title', () {
       for (final lesson in lessons) {
-        expect(studentNames[lesson.studentId], isNotNull, reason: '${lesson.id}');
         expect(listingTitles[lesson.listingId], isNotNull, reason: '${lesson.id}');
       }
     });

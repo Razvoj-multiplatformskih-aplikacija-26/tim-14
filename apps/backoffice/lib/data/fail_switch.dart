@@ -5,9 +5,12 @@ import 'package:use_cases/use_cases.dart';
 final class FailSwitch {
   bool failNext = false;
 
+  // Vrsta greške. Podrazumevano podaci nisu dostupni; test stavi unreachable kad glumi ugašen server.
+  RepositoryFailure failure = RepositoryFailure.unavailable;
+
   void check() {
     if (!failNext) return;
     failNext = false;
-    throw const RepositoryException('Simulirana greška');
+    throw RepositoryException('Simulirana greška', failure: failure);
   }
 }

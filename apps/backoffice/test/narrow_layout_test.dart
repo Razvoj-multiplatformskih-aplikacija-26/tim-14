@@ -1,4 +1,3 @@
-import 'package:backoffice/data/demo_data.dart';
 import 'package:backoffice/lessons/lesson_detail.dart';
 import 'package:backoffice/lessons/queue_list.dart';
 import 'package:backoffice/lessons/queue_table.dart';
@@ -75,7 +74,7 @@ void main() {
   // Redosled kartica zavisi od današnjeg datuma, pa se ime izabranog čita iz Bloca.
   String selectedName(WidgetTester tester) {
     final state = tester.element(find.byType(QueueList)).read<LessonQueueBloc>().state as LessonQueueLoaded;
-    return studentName(state.selected!.lesson.studentId);
+    return state.selected!.lesson.studentName;
   }
 
   Color cardBorderColor(WidgetTester tester, String name) {

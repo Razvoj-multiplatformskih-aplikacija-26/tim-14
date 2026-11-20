@@ -21,7 +21,10 @@ void main() {
 
   // Ulogovan je administrator, pa ruter odmah otvara Verifikaciju. Bez pumpAndSettle, da se vidi i učitavanje.
   Future<void> pumpApp(WidgetTester tester, {VerificationRepository? verifications}) async {
-    await pumpBackoffice(tester, fakeDependencies(signedIn: admin, failSwitch: failSwitch, verifications: verifications));
+    await pumpBackoffice(
+      tester,
+      fakeDependencies(signedIn: admin, failSwitch: failSwitch, verifications: verifications),
+    );
   }
 
   Finder inTable(String text) => find.descendant(of: find.byType(VerificationTable), matching: find.text(text));

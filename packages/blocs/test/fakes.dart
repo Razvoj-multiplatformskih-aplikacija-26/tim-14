@@ -51,10 +51,12 @@ final class InMemoryLessonRepository implements LessonRepository {
 
   final List<Lesson> lessons;
   bool fail = false;
+  // Kakvu grešku baca kad je fail uključen. Ugašen server je unreachable.
+  RepositoryFailure failure = RepositoryFailure.unavailable;
 
   void _check() {
     if (fail) {
-      throw const RepositoryException('Nema mreže');
+      throw RepositoryException('Nema mreže', failure: failure);
     }
   }
 
@@ -147,13 +149,15 @@ final class InMemoryVerificationRepository implements VerificationRepository {
 
   final List<ProfessorProfile> profiles;
   bool fail = false;
+  // Kakvu grešku baca kad je fail uključen. Ugašen server je unreachable.
+  RepositoryFailure failure = RepositoryFailure.unavailable;
 
   // Ako je postavljen, save čeka dok ga test ne pusti.
   Completer<void>? gate;
 
   void _check() {
     if (fail) {
-      throw const RepositoryException('Nema mreže');
+      throw RepositoryException('Nema mreže', failure: failure);
     }
   }
 

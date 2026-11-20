@@ -6,6 +6,7 @@ import 'package:backoffice/lessons/lesson_detail.dart';
 import 'package:backoffice/lessons/lesson_queue_page.dart';
 import 'package:backoffice/lessons/queue_table.dart';
 import 'package:backoffice/text/domain_errors.dart';
+import 'package:backoffice/text/failures.dart';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
@@ -175,6 +176,26 @@ void main() {
     // Osvežavanje je stiglo do repozitorijuma (potrošilo je grešku), a tabela je ostala.
     expect(failSwitch.failNext, isFalse);
     expect(find.text(unavailable), findsOneWidget);
+    expect(inTable('Ana Marković'), findsOneWidget);
+  });
+
+  testWidgets('Osveži with the server stopped shows Nema veze sa serverom, and Pokušaj ponovo brings the table back', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.pumpAndSettle();
+    failSwitch
+      ..failure = RepositoryFailure.unreachable
+      ..failNext = true;
+
+    await tapAndSettle(tester, find.byTooltip('Osveži'));
+
+    expect(find.text('Časovi nisu učitani.'), findsOneWidget);
+    expect(find.text(RepositoryFailure.unreachable.message), findsOneWidget);
+    expect(find.byType(QueueTable), findsNothing);
+
+    await tapAndSettle(tester, find.text('Pokušaj ponovo'));
+
     expect(inTable('Ana Marković'), findsOneWidget);
   });
 
