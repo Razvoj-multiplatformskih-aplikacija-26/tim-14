@@ -7,6 +7,7 @@ import 'http.dart';
 import 'public_handlers.dart';
 import 'sessions.dart';
 import 'staff_handlers.dart';
+import 'student_handlers.dart';
 
 /// The whole HTTP surface of the server: routes plus the middleware every request passes through.
 ///
@@ -26,6 +27,7 @@ Handler buildHandler({
 }) {
   final public = PublicHandlers(professors, lessons);
   final staff = StaffHandlers(lessons, verifications, clock);
+  final student = StudentHandlers(lessons, professors, clock);
   final router = RelicRouter()
     ..get(ApiPaths.health, (request) => Response.ok(body: Body.fromString('ok')))
     // Sessions (I4)
@@ -38,6 +40,12 @@ Handler buildHandler({
     ..get(ApiPaths.listingsOf(':id'), public.listings)
     ..get(ApiPaths.slotsOf(':id'), public.slots)
     ..get(ApiPaths.takenSlotsOf(':id'), public.takenSlots)
+    // Lessons of the student; the two reads serve the professor too (I5)
+    ..get(ApiPaths.lessons, student.lessons)
+    ..get(ApiPaths.lesson(':id'), student.lesson)
+    ..post(ApiPaths.lessons, student.request)
+    ..post(ApiPaths.withdrawal(':id'), student.withdraw)
+    ..post(ApiPaths.cancellation(':id'), student.cancel)
     // Staff (D6)
     ..post(ApiPaths.confirmation(':id'), staff.confirm)
     ..post(ApiPaths.rejection(':id'), staff.reject)
