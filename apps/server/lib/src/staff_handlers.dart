@@ -1,3 +1,5 @@
+import 'package:api_contract/api_contract.dart';
+import 'package:api_mapping/api_mapping.dart';
 import 'package:domain/domain.dart';
 import 'package:relic/relic.dart' hide Result;
 import 'package:use_cases/use_cases.dart';
@@ -29,7 +31,7 @@ final class StaffHandlers {
       return problem(const NotFound());
     }
     final result = await ConfirmLesson(_lessons, _clock, caller)(lesson);
-    return respond(result, confirmationJson);
+    return respond(result, (confirmation) => confirmation.toDto().toJson());
   }
 
   /// `POST /lessons/{id}/rejection` → the rejected lesson.
@@ -40,7 +42,7 @@ final class StaffHandlers {
       return problem(const NotFound());
     }
     final result = await RejectLesson(_lessons, _clock, caller)(lesson);
-    return respond(result, lessonJson);
+    return respond(result, (lesson) => lesson.toDto().toJson());
   }
 
   /// `POST /lessons/{id}/held` with `{"note": …}` (optional) → the lesson, now held.
@@ -53,7 +55,7 @@ final class StaffHandlers {
       return problem(const NotFound());
     }
 
-    final text = _optionalString(await readObject(request), 'note');
+    final text = HeldDto.fromJson(await readObject(request)).note;
     LessonNote? note;
     if (text != null) {
       final parsed = LessonNote.parse(text);
@@ -64,7 +66,7 @@ final class StaffHandlers {
     }
 
     final result = await RecordHeld(_lessons, _clock, caller)(lesson, note: note);
-    return respond(result, lessonJson);
+    return respond(result, (lesson) => lesson.toDto().toJson());
   }
 
   /// `POST /lessons/{id}/no-show` → the lesson, now a no-show.
@@ -75,7 +77,7 @@ final class StaffHandlers {
       return problem(const NotFound());
     }
     final result = await RecordNoShow(_lessons, _clock, caller)(lesson);
-    return respond(result, lessonJson);
+    return respond(result, (lesson) => lesson.toDto().toJson());
   }
 
   /// `GET /verifications` → the profiles waiting for a decision, the longest-waiting first.
@@ -88,7 +90,7 @@ final class StaffHandlers {
       return problem(const NotAllowed());
     }
     final queue = await GetVerificationQueue(_verifications)();
-    return json(200, [for (final profile in queue) profileJson(profile)]);
+    return json(200, [for (final profile in queue) profile.toDto().toJson()]);
   }
 
   /// `POST /verifications/{id}/approval` → the profile, now verified.
@@ -102,7 +104,7 @@ final class StaffHandlers {
       return problem(const NotFound());
     }
     final result = await VerifyProfessor(_verifications, _clock, caller)(profile);
-    return respond(result, profileJson);
+    return respond(result, (verified) => verified.toDto().toJson());
   }
 
   /// `POST /verifications/{id}/rejection` with `{"reason": …}` → the profile, now rejected.
@@ -113,9 +115,9 @@ final class StaffHandlers {
     if (profile == null) {
       return problem(const NotFound());
     }
-    final reason = _string(await readObject(request), 'reason');
+    final reason = RejectionDto.fromJson(await readObject(request)).reason;
     final result = await RejectProfessor(_verifications, _clock, caller)(profile, reason: reason);
-    return respond(result, profileJson);
+    return respond(result, (rejected) => rejected.toDto().toJson());
   }
 
   /// Steps 2 and 3 for a lesson: the lesson as the database has it now, or null if there is none or the caller
@@ -133,16 +135,3 @@ final class StaffHandlers {
   /// The `:id` of the route. Every route of this class has one, so it is always there.
   String _pathId(Request request) => request.rawPathParameters[#id]!;
 }
-
-/// A body field that must be a string. Anything else is the client's mistake: `handleErrors` answers 400.
-String _string(Map<String, Object?> body, String key) => switch (body[key]) {
-  final String value => value,
-  _ => throw FormatException('Expected "$key" to be a string'),
-};
-
-/// The same, but the field may be absent or null.
-String? _optionalString(Map<String, Object?> body, String key) => switch (body[key]) {
-  null => null,
-  final String value => value,
-  _ => throw FormatException('Expected "$key" to be a string'),
-};

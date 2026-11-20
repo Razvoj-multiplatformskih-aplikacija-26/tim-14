@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:api_contract/api_contract.dart';
+import 'package:api_mapping/api_mapping.dart';
 import 'package:domain/domain.dart' show DomainError, Result, Success;
 import 'package:relic/relic.dart' hide Result;
 import 'package:use_cases/use_cases.dart' show RepositoryException;
-
-import 'stand_ins.dart' show problemOf;
 
 final _problemMimeType = MimeType.parse(ProblemDto.mediaType);
 
@@ -18,8 +17,8 @@ Response problemResponse(ProblemDto problem) =>
 
 /// A refusal by a domain rule, as a problem response. In Spring terms: what an `@ExceptionHandler` makes of an
 /// exception, except that here the rule returns its refusal as a value instead of throwing it.
-/// After Ilija's I3 this is `problemResponse(error.toProblem())`.
-Response problem(DomainError error) => problemResponse(problemOf(error));
+/// The code and the rule's numbers come from `api_mapping`, the same mapping the clients read them back with.
+Response problem(DomainError error) => problemResponse(error.toProblem());
 
 /// What a handler answers with the result of a use case: the value as JSON, or the refusal as a problem.
 /// [toJson] turns the value into JSON; [status] is for a success other than 200, such as 201 for a create.
