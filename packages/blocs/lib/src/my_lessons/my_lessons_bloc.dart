@@ -32,10 +32,14 @@ class MyLessonsBloc extends Bloc<MyLessonsEvent, MyLessonsState> {
 
   // Sa listom na ekranu se osvežava tiho. Bez nje (prvo otvaranje, posle greške) učitava se sa spinerom.
   Future<void> _onRefreshed(MyLessonsRefreshed event, Emitter<MyLessonsState> emit) async {
-    if (state is MyLessonsLoaded) {
-      await _reload(emit);
-    } else {
-      await _load(emit);
+    try {
+      if (state is MyLessonsLoaded) {
+        await _reload(emit);
+      } else {
+        await _load(emit);
+      }
+    } finally {
+      event.done?.complete();
     }
   }
 

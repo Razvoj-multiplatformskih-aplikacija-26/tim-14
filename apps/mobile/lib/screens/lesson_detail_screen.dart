@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ui/ui.dart';
 
-import '../data/demo_data.dart';
 import '../text/dates.dart';
 import '../text/domain_errors.dart';
 import '../text/failures.dart';
+import '../widgets/listing_title.dart';
 
 class LessonDetailScreen extends StatelessWidget {
   const LessonDetailScreen({super.key, required this.lessonId});
@@ -21,7 +21,7 @@ class LessonDetailScreen extends StatelessWidget {
       body: BlocConsumer<MyLessonsBloc, MyLessonsState>(
         // Ako akcija ne prođe, Bloc javi zašto u notice, a mi to prikažemo kao SnackBar. Posle odbijene akcije
         // Bloc sam ponovo učita časove, pa detalj pokaže stanje kakvo je sada na serveru.
-        listenWhen: (previous, current) => current is MyLessonsLoaded && current.notice != null,
+        listenWhen: (previous, current) => current is MyLessonsLoaded && shouldShow(current.notice),
         listener: (context, state) {
           final notice = (state as MyLessonsLoaded).notice!;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(notice.message)));
@@ -72,7 +72,6 @@ class _LessonDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     final lesson = item.lesson;
     final professorName = lesson.professorName;
-    final listingTitle = listingTitles[lesson.listingId] ?? '';
     final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return ListView(
@@ -88,7 +87,10 @@ class _LessonDetail extends StatelessWidget {
                 children: [
                   Text(professorName, style: AppTextStyles.headingLg),
                   const SizedBox(height: AppSpacing.px2),
-                  Text(listingTitle, style: AppTextStyles.bodySm.copyWith(color: mutedColor)),
+                  ListingTitle(
+                    lesson: lesson,
+                    style: AppTextStyles.bodySm.copyWith(color: mutedColor),
+                  ),
                 ],
               ),
             ),

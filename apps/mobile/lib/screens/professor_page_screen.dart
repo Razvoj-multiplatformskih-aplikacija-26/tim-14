@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
@@ -12,10 +14,10 @@ import '../text/dates.dart';
 import '../text/failures.dart';
 
 class ProfessorPageScreen extends StatelessWidget {
-  const ProfessorPageScreen({super.key, required this.professorId, required this.failSwitch});
+  const ProfessorPageScreen({super.key, required this.professorId, this.failSwitch});
 
   final UserId professorId;
-  final FailSwitch failSwitch;
+  final FailSwitch? failSwitch;
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +33,11 @@ class ProfessorPageScreen extends StatelessWidget {
 class _ProfessorPageView extends StatelessWidget {
   const _ProfessorPageView({required this.failSwitch});
 
-  final FailSwitch failSwitch;
+  // Samo nad demo podacima. Nad serverom grešku pravi pravi server.
+  final FailSwitch? failSwitch;
 
   void _simulateError(BuildContext context) {
-    failSwitch.failNext = true;
+    failSwitch?.failNext = true;
     context.read<ProfessorPageBloc>().add(ProfessorPageRequested());
   }
 
@@ -44,10 +47,11 @@ class _ProfessorPageView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profil profesora'),
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (_) => _simulateError(context),
-            itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
-          ),
+          if (failSwitch != null)
+            PopupMenuButton<String>(
+              onSelected: (_) => _simulateError(context),
+              itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
+            ),
         ],
       ),
       body: BlocConsumer<ProfessorPageBloc, ProfessorPageState>(
@@ -102,43 +106,52 @@ class _ProfessorDetails extends StatelessWidget {
     final profile = page.profile;
     final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.px16),
-      children: [
-        Row(
-          children: [
-            Avatar(name: profile.fullName, size: AvatarSize.lg),
-            const SizedBox(width: AppSpacing.px16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(profile.fullName, style: AppTextStyles.headingLg),
-                  const SizedBox(height: AppSpacing.px2),
-                  Text(profile.city.label, style: AppTextStyles.bodySm.copyWith(color: mutedColor)),
-                  if (profile.isVerified) ...[
-                    const SizedBox(height: AppSpacing.px8),
-                    const AppBadge(label: 'Diploma potvrđena', tone: BadgeTone.verified),
+    // Povuci nadole: termin koji je u međuvremenu zauzet nestaje sa liste.
+    return RefreshIndicator(
+      onRefresh: () {
+        final done = Completer<void>();
+        context.read<ProfessorPageBloc>().add(ProfessorPageRefreshed(done: done));
+        return done.future;
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.px16),
+        children: [
+          Row(
+            children: [
+              Avatar(name: profile.fullName, size: AvatarSize.lg),
+              const SizedBox(width: AppSpacing.px16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(profile.fullName, style: AppTextStyles.headingLg),
+                    const SizedBox(height: AppSpacing.px2),
+                    Text(profile.city.label, style: AppTextStyles.bodySm.copyWith(color: mutedColor)),
+                    if (profile.isVerified) ...[
+                      const SizedBox(height: AppSpacing.px8),
+                      const AppBadge(label: 'Diploma potvrđena', tone: BadgeTone.verified),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
-        if (profile.bio.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.px16),
-          Text(profile.bio, style: AppTextStyles.bodyBase),
-        ],
-        const SizedBox(height: AppSpacing.px24),
-        const Text('Oglasi i slobodni termini', style: AppTextStyles.headingLg),
-        const SizedBox(height: AppSpacing.px8),
-        if (page.listings.isEmpty) const Text('Profesor još nema nijedan oglas.', style: AppTextStyles.bodySm),
-        for (final listing in page.listings)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.px8),
-            child: _ListingCard(listing: listing, slots: page.freeSlotsOf(listing.id)),
+            ],
           ),
-      ],
+          if (profile.bio.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.px16),
+            Text(profile.bio, style: AppTextStyles.bodyBase),
+          ],
+          const SizedBox(height: AppSpacing.px24),
+          const Text('Oglasi i slobodni termini', style: AppTextStyles.headingLg),
+          const SizedBox(height: AppSpacing.px8),
+          if (page.listings.isEmpty) const Text('Profesor još nema nijedan oglas.', style: AppTextStyles.bodySm),
+          for (final listing in page.listings)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.px8),
+              child: _ListingCard(listing: listing, slots: page.freeSlotsOf(listing.id)),
+            ),
+        ],
+      ),
     );
   }
 }

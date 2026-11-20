@@ -42,6 +42,14 @@ class ProfessorsBloc extends Bloc<ProfessorsEvent, ProfessorsState> {
 
   // Sa listom na ekranu se osvežava tiho, od prve strane. Ako server ne odgovori, lista ostaje kakva je.
   Future<void> _onRefreshed(ProfessorsRefreshed event, Emitter<ProfessorsState> emit) async {
+    try {
+      await _refresh(emit);
+    } finally {
+      event.done?.complete();
+    }
+  }
+
+  Future<void> _refresh(Emitter<ProfessorsState> emit) async {
     final current = state;
     if (current is! ProfessorsLoaded) {
       await _load(emit);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:domain/domain.dart';
 
 sealed class MyLessonsEvent {}
@@ -10,7 +12,12 @@ class MyLessonsRetried extends MyLessonsEvent {}
 
 // Osvežavanje bez spinera: povuci nadole, otvoren tab, ili posle akcije koju je server odbio.
 // Lista ostaje na ekranu dok stižu novi podaci.
-class MyLessonsRefreshed extends MyLessonsEvent {}
+class MyLessonsRefreshed extends MyLessonsEvent {
+  MyLessonsRefreshed({this.done});
+
+  // Završi se kad osvežavanje stigne do kraja, uspešno ili ne. RefreshIndicator do tada drži svoj spiner.
+  final Completer<void>? done;
+}
 
 class LessonWithdrawn extends MyLessonsEvent {
   LessonWithdrawn(this.lesson);

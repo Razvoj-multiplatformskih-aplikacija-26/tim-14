@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
@@ -240,16 +242,36 @@ void main() {
     ],
   );
 
+  late Completer<void> done;
+
   blocTest<MyLessonsBloc, MyLessonsState>(
-    'a refresh that cannot reach the server keeps the list on screen',
-    setUp: () => repository = InMemoryLessonRepository([pending])..fail = true,
+    'a refresh that cannot reach the server keeps the list on screen, and still says it is done',
+    setUp: () {
+      repository = InMemoryLessonRepository([pending])..fail = true;
+      done = Completer<void>();
+    },
     build: buildBloc,
     seed: () => MyLessonsLoaded([LessonItem(lesson: pending, action: LessonAction.withdraw)]),
-    act: (bloc) => bloc.add(MyLessonsRefreshed()),
+    act: (bloc) => bloc.add(MyLessonsRefreshed(done: done)),
     expect: () => [
       MyLessonsLoaded([
         LessonItem(lesson: pending, action: LessonAction.withdraw),
       ], notice: const ActionFailed(RepositoryFailure.unavailable)),
     ],
+    verify: (_) => expect(done.isCompleted, isTrue),
+  );
+
+  // Ista lista daje isto stanje, koje Bloc ne emituje ponovo. Zato povuci nadole čeka done, a ne novo stanje.
+  blocTest<MyLessonsBloc, MyLessonsState>(
+    'a refresh that changes nothing emits nothing, but is still done',
+    setUp: () {
+      repository = InMemoryLessonRepository([pending]);
+      done = Completer<void>();
+    },
+    build: buildBloc,
+    seed: () => MyLessonsLoaded([LessonItem(lesson: pending, action: LessonAction.withdraw)]),
+    act: (bloc) => bloc.add(MyLessonsRefreshed(done: done)),
+    expect: () => <MyLessonsState>[],
+    verify: (_) => expect(done.isCompleted, isTrue),
   );
 }

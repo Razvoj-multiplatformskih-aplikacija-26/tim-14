@@ -13,11 +13,11 @@ import '../text/domain_errors.dart';
 import '../text/failures.dart';
 
 class RequestFormScreen extends StatelessWidget {
-  const RequestFormScreen({super.key, required this.professorId, required this.slotId, required this.failSwitch});
+  const RequestFormScreen({super.key, required this.professorId, required this.slotId, this.failSwitch});
 
   final UserId professorId;
   final SlotId slotId;
-  final FailSwitch failSwitch;
+  final FailSwitch? failSwitch;
 
   @override
   Widget build(BuildContext context) {
@@ -33,11 +33,12 @@ class RequestFormScreen extends StatelessWidget {
 class _RequestFormView extends StatelessWidget {
   const _RequestFormView({required this.failSwitch});
 
-  final FailSwitch failSwitch;
+  // Samo nad demo podacima. Nad serverom grešku pravi pravi server.
+  final FailSwitch? failSwitch;
 
   // Za razliku od listi, ovde se ništa ne učitava ponovo. Greška čeka klik na „Pošalji zahtev“.
   void _simulateError(BuildContext context) {
-    failSwitch.failNext = true;
+    failSwitch?.failNext = true;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sledeći zahtev će vratiti grešku.')));
   }
 
@@ -47,10 +48,11 @@ class _RequestFormView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Zahtev za čas'),
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (_) => _simulateError(context),
-            itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
-          ),
+          if (failSwitch != null)
+            PopupMenuButton<String>(
+              onSelected: (_) => _simulateError(context),
+              itemBuilder: (context) => [const PopupMenuItem(value: 'error', child: Text('Simuliraj grešku'))],
+            ),
         ],
       ),
       body: BlocConsumer<RequestFormBloc, RequestFormState>(

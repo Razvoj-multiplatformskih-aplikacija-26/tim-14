@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
@@ -109,15 +111,19 @@ void main() {
     ],
   );
 
+  late Completer<void> done;
+
   blocTest<ProfessorPageBloc, ProfessorPageState>(
-    'a refresh that cannot reach the server keeps the page and says why',
+    'a refresh that cannot reach the server keeps the page, says why, and is still done',
+    setUp: () => done = Completer<void>(),
     build: buildBloc,
     act: (bloc) async {
       bloc.add(ProfessorPageRequested());
       await Future<void>.delayed(Duration.zero);
       professors.fail = true;
-      bloc.add(ProfessorPageRefreshed());
+      bloc.add(ProfessorPageRefreshed(done: done));
     },
+    verify: (_) => expect(done.isCompleted, isTrue),
     expect: () => [
       const ProfessorPageLoading(),
       isA<ProfessorPageLoaded>().having((state) => state.refreshFailure, 'refreshFailure', isNull),

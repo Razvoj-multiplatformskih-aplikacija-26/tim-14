@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/app.dart';
 import 'package:mobile/data/demo_data.dart';
 import 'package:mobile/data/fail_switch.dart';
 import 'package:mobile/data/fake_lesson_repository.dart';
@@ -19,13 +18,7 @@ void main() {
 
     final failSwitch = FailSwitch();
     await tester.pumpWidget(
-      App(
-        lessons: FakeLessonRepository(demoLessons(clock.now()), failSwitch),
-        professors: demoProfessorRepository(failSwitch),
-        clock: clock,
-        me: ana,
-        failSwitch: failSwitch,
-      ),
+      testApp(lessons: FakeLessonRepository(demoLessons(clock.now()), failSwitch), failSwitch: failSwitch),
     );
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
