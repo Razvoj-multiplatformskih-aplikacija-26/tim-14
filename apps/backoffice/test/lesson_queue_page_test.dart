@@ -1,14 +1,12 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/demo_data.dart';
 import 'package:backoffice/data/empty_lesson_repository.dart';
 import 'package:backoffice/data/fail_switch.dart';
 import 'package:backoffice/data/fake_lesson_repository.dart';
-import 'package:backoffice/data/fake_verification_repository.dart';
 import 'package:backoffice/lessons/lesson_detail.dart';
 import 'package:backoffice/lessons/lesson_queue_page.dart';
 import 'package:backoffice/lessons/queue_table.dart';
-import 'package:backoffice/router.dart';
 import 'package:backoffice/text/domain_errors.dart';
+import 'package:backoffice/text/failures.dart';
 import 'package:blocs/blocs.dart';
 import 'package:domain/domain.dart';
 import 'package:flutter/material.dart';
@@ -25,15 +23,7 @@ void main() {
   // Bez pumpAndSettle, da test može da vidi i stanje dok se učitava.
   Future<void> pumpApp(WidgetTester tester, {LessonRepository? lessons}) async {
     useDesktopSize(tester);
-    final now = DateTime.now();
-    await tester.pumpWidget(
-      BackofficeApp(
-        failSwitch: failSwitch,
-        lessons: lessons ?? FakeLessonRepository(demoLessons(now), failSwitch, delay: Duration.zero),
-        verifications: FakeVerificationRepository(demoProfessors(now), failSwitch, delay: Duration.zero),
-        router: createRouter(ValueNotifier<User>(milica)),
-      ),
-    );
+    await pumpBackoffice(tester, fakeDependencies(failSwitch: failSwitch, lessons: lessons));
   }
 
   Finder inTable(String text) => find.descendant(of: find.byType(QueueTable), matching: find.text(text));
@@ -186,6 +176,26 @@ void main() {
     // Osvežavanje je stiglo do repozitorijuma (potrošilo je grešku), a tabela je ostala.
     expect(failSwitch.failNext, isFalse);
     expect(find.text(unavailable), findsOneWidget);
+    expect(inTable('Ana Marković'), findsOneWidget);
+  });
+
+  testWidgets('Osveži with the server stopped shows Nema veze sa serverom, and Pokušaj ponovo brings the table back', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.pumpAndSettle();
+    failSwitch
+      ..failure = RepositoryFailure.unreachable
+      ..failNext = true;
+
+    await tapAndSettle(tester, find.byTooltip('Osveži'));
+
+    expect(find.text('Časovi nisu učitani.'), findsOneWidget);
+    expect(find.text(RepositoryFailure.unreachable.message), findsOneWidget);
+    expect(find.byType(QueueTable), findsNothing);
+
+    await tapAndSettle(tester, find.text('Pokušaj ponovo'));
+
     expect(inTable('Ana Marković'), findsOneWidget);
   });
 

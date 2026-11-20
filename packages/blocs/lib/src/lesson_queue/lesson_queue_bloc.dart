@@ -182,7 +182,13 @@ class LessonQueueBloc extends Bloc<LessonQueueEvent, LessonQueueState> {
         emit(_keepSelection(latest, lessons.map(_toRow).toList()));
       }
     } on RepositoryException catch (e) {
-      _showFailure(emit, e.failure);
+      // Server se ne javlja: stara lista bi izgledala kao da je sve u redu, pa ide ekran „Nema veze sa serverom“
+      // sa dugmetom Pokušaj ponovo. Za ostale greške server je bar odgovorio, pa lista ostaje, a greška ide u SnackBar.
+      if (e.failure == RepositoryFailure.unreachable) {
+        emit(LessonQueueFailure(e.failure));
+      } else {
+        _showFailure(emit, e.failure);
+      }
     }
   }
 

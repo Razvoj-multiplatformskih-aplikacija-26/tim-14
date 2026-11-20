@@ -119,10 +119,7 @@ class _QueueRowTile extends StatelessWidget {
             children: [
               Expanded(
                 flex: _flex.student,
-                child: _Cell(
-                  studentName(lesson.studentId),
-                  AppTextStyles.bodySmMedium.copyWith(color: colors.onSurface),
-                ),
+                child: _Cell(lesson.studentName, AppTextStyles.bodySmMedium.copyWith(color: colors.onSurface)),
               ),
               Expanded(
                 flex: _flex.listing,

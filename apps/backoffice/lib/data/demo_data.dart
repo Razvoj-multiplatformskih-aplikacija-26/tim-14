@@ -2,44 +2,32 @@ import 'package:domain/domain.dart';
 
 const milica = User(id: UserId('milica'), name: 'Milica Jovanović', role: Role.professor);
 const admin = User(id: UserId('admin'), name: 'Jovana Ilić', role: Role.admin);
+// Učenica ima nalog samo da bi se videlo da backoffice odbija učenike.
+const ana = User(id: UserId('ana-markovic'), name: 'Ana Marković', role: Role.student);
 
 const _srednja = ListingId('l-srednja');
 const _malaMatura = ListingId('l-mala-matura');
 const _prijemni = ListingId('l-prijemni');
 
-const _ana = UserId('ana-markovic');
-const _nikola = UserId('nikola-petrovic');
-const _marija = UserId('marija-stojanovic');
-const _luka = UserId('luka-ilic');
-const _teodora = UserId('teodora-djordjevic');
-const _stefan = UserId('stefan-popovic');
-const _vuk = UserId('vuk-lazic');
-const _mina = UserId('mina-kostic');
-const _petar = UserId('petar-jankovic');
+// Imena se prepisuju u čas kad stigne zahtev (lesson.studentName), pa ekranima ne treba mapa sa imenima.
+const _nikola = User(id: UserId('nikola-petrovic'), name: 'Nikola Petrović', role: Role.student);
+const _marija = User(id: UserId('marija-stojanovic'), name: 'Marija Stojanović', role: Role.student);
+const _luka = User(id: UserId('luka-ilic'), name: 'Luka Ilić', role: Role.student);
+const _teodora = User(id: UserId('teodora-djordjevic'), name: 'Teodora Đorđević', role: Role.student);
+const _stefan = User(id: UserId('stefan-popovic'), name: 'Stefan Popović', role: Role.student);
+const _vuk = User(id: UserId('vuk-lazic'), name: 'Vuk Lazić', role: Role.student);
+const _mina = User(id: UserId('mina-kostic'), name: 'Mina Kostić', role: Role.student);
+const _petar = User(id: UserId('petar-jankovic'), name: 'Petar Janković', role: Role.student);
 
-// Lesson ima samo id učenika i oglasa, a backoffice u KT1 nema odakle da dobije imena.
-// Zato kolone učenik i oglas čitaju ove mape. U KT2 imena šalje server.
-const studentNames = <UserId, String>{
-  _ana: 'Ana Marković',
-  _nikola: 'Nikola Petrović',
-  _marija: 'Marija Stojanović',
-  _luka: 'Luka Ilić',
-  _teodora: 'Teodora Đorđević',
-  _stefan: 'Stefan Popović',
-  _vuk: 'Vuk Lazić',
-  _mina: 'Mina Kostić',
-  _petar: 'Petar Janković',
-};
-
+// Čas nosi samo id oglasa, ne i naziv. Kolona oglas čita ovu mapu.
+// Seed na serveru koristi iste id-jeve oglasa, pa mapa radi i nad serverom.
 const listingTitles = <ListingId, String>{
   _srednja: 'Matematika za srednju školu i pripremu za fakultet',
   _malaMatura: 'Priprema za malu maturu',
   _prijemni: 'Matematika za prijemni na FTN',
 };
 
-// Ako imena nema u mapi, ekran pokaže id, da ne bi pukao.
-String studentName(UserId id) => studentNames[id] ?? id.value;
-
+// Ako naziva nema u mapi (oglas iz seeda koji ovde ne postoji), ekran pokaže id, da ne bi pukao.
 String listingTitle(ListingId id) => listingTitles[id] ?? id.value;
 
 const _durations = <ListingId, LessonDuration>{
@@ -78,7 +66,7 @@ List<Lesson> demoLessons(DateTime now) {
     // Tri zahteva za isti termin. Potvrda jednog odbija druga dva.
     _lesson(
       'c-01',
-      student: _ana,
+      student: ana,
       listing: _srednja,
       slot: 's-thu-17',
       start: nextThursdayAt17(now),
@@ -134,7 +122,7 @@ List<Lesson> demoLessons(DateTime now) {
     // Još nisu počeli, pa „održan“ vraća LessonNotStarted.
     _lesson(
       'c-07',
-      student: _ana,
+      student: ana,
       listing: _prijemni,
       start: dayAt(2, 12),
       createdAt: hoursAgo(30),
@@ -218,14 +206,14 @@ List<Lesson> demoLessons(DateTime now) {
       start: dayAt(7, 11),
       createdAt: hoursAgo(72),
       message: 'Želeo bih još jedan čas pred probni test.',
-      status: Cancelled(by: _vuk, at: hoursAgo(24)),
+      status: Cancelled(by: _vuk.id, at: hoursAgo(24)),
     ),
   ];
 }
 
 Lesson _lesson(
   String id, {
-  required UserId student,
+  required User student,
   required ListingId listing,
   required DateTime start,
   required DateTime createdAt,
@@ -238,8 +226,8 @@ Lesson _lesson(
   listingId: listing,
   professorId: milica.id,
   professorName: milica.name,
-  studentId: student,
-  studentName: studentNames[student]!,
+  studentId: student.id,
+  studentName: student.name,
   start: start,
   duration: _durations[listing]!,
   message: RequestMessage.parse(message).valueOrNull!,

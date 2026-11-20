@@ -81,7 +81,7 @@ class _QueueCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      studentName(lesson.studentId),
+                      lesson.studentName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.bodySmMedium.copyWith(color: colors.onSurface),

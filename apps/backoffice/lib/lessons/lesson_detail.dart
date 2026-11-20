@@ -79,13 +79,13 @@ class _Content extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: AppSpacing.px12,
           children: [
-            Avatar(name: studentName(lesson.studentId)),
+            Avatar(name: lesson.studentName),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: AppSpacing.px4,
                 children: [
-                  Text(studentName(lesson.studentId), style: AppTextStyles.headingXl.copyWith(color: colors.onSurface)),
+                  Text(lesson.studentName, style: AppTextStyles.headingXl.copyWith(color: colors.onSurface)),
                   Text(
                     '${formatDateTime(lesson.start)} · ${lesson.duration.minutes} min',
                     style: AppTextStyles.bodySm.copyWith(color: colors.onSurfaceVariant),

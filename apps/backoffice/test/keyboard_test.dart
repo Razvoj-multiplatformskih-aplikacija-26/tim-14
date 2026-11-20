@@ -1,10 +1,5 @@
-import 'package:backoffice/app.dart';
 import 'package:backoffice/data/demo_data.dart';
-import 'package:backoffice/data/fail_switch.dart';
-import 'package:backoffice/data/fake_lesson_repository.dart';
-import 'package:backoffice/data/fake_verification_repository.dart';
 import 'package:backoffice/lessons/queue_table.dart';
-import 'package:backoffice/router.dart';
 import 'package:backoffice/text/domain_errors.dart';
 import 'package:backoffice/verification/verification_table.dart';
 import 'package:blocs/blocs.dart';
@@ -21,16 +16,7 @@ void main() {
   // Profesor otvara Časove, administrator Verifikaciju.
   Future<void> pumpApp(WidgetTester tester, {User user = milica}) async {
     useDesktopSize(tester);
-    final now = DateTime.now();
-    final failSwitch = FailSwitch();
-    await tester.pumpWidget(
-      BackofficeApp(
-        failSwitch: failSwitch,
-        lessons: FakeLessonRepository(demoLessons(now), failSwitch, delay: Duration.zero),
-        verifications: FakeVerificationRepository(demoProfessors(now), failSwitch, delay: Duration.zero),
-        router: createRouter(ValueNotifier<User>(user)),
-      ),
-    );
+    await pumpBackoffice(tester, fakeDependencies(signedIn: user));
     await tester.pumpAndSettle();
   }
 
