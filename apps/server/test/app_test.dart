@@ -25,7 +25,7 @@ void main() {
         corsOrigins: const [backoffice],
         lessons: UnusedLessons(),
         verifications: UnusedVerifications(),
-        findUser: noUsers,
+        sessions: testSessions(),
       ),
     );
     base = Uri.parse('http://localhost:${server.port}');

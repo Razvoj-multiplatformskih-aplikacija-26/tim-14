@@ -1,4 +1,4 @@
-import 'package:domain/domain.dart';
+import 'package:server/server.dart';
 import 'package:use_cases/use_cases.dart';
 
 /// Ports for tests that never reach a repository, such as health and CORS. A call means the test is wrong, so
@@ -14,4 +14,16 @@ final class UnusedVerifications implements VerificationRepository {
   Never noSuchMethod(Invocation invocation) => throw StateError('This test does not use verifications');
 }
 
-Future<User?> noUsers(UserId id) async => null;
+/// A secret only the tests use, as long as `JWT_SECRET` must be.
+const testSecret = 'test-only-secret-0123456789abcdef0123456789';
+
+/// The login of the server, with a test secret and [accounts] (none by default).
+SessionHandlers testSessions({AccountStore accounts = const _NoAccounts(), Duration ttl = const Duration(hours: 8)}) =>
+    SessionHandlers(accounts: accounts, secret: testSecret, ttl: ttl);
+
+final class _NoAccounts implements AccountStore {
+  const _NoAccounts();
+
+  @override
+  Future<Account?> account(String login) async => null;
+}

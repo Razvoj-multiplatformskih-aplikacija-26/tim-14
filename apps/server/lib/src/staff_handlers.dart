@@ -5,7 +5,7 @@ import 'package:relic/relic.dart' hide Result;
 import 'package:use_cases/use_cases.dart';
 
 import 'http.dart';
-import 'stand_ins.dart';
+import 'sessions.dart';
 
 /// The staff endpoints: a professor decides and records their lessons, an admin decides verifications.
 /// In Spring terms: a `@RestController`, with the repositories and the clock injected through the constructor.
