@@ -157,7 +157,7 @@ void main() {
       final slots = await professors.slotsOf(milica.id);
       final free = freeSlots(
         slots,
-        lessons: await lessons.lessonsOfProfessor(milica.id),
+        taken: await lessons.takenSlotsOf(milica.id),
         now: seededAt,
       ).where((slot) => !mine.any((lesson) => lesson.slotId == slot.id)).toList();
       final message = RequestMessage.parse('Može li još jedan čas?').valueOrNull!;

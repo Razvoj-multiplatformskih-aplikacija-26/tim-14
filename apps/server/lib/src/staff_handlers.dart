@@ -122,7 +122,7 @@ final class StaffHandlers {
   /// may not see it. Both become 404, so a stranger cannot even tell that the lesson exists.
   Future<Lesson?> _visibleLesson(Request request, User caller) async {
     final lesson = await _lessons.find(LessonId(_pathId(request)));
-    if (lesson == null || !canView(caller, lesson)) {
+    if (lesson == null || !AccessPolicy.canView(caller, lesson)) {
       return null;
     }
     return lesson;

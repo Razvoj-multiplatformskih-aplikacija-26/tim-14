@@ -39,10 +39,7 @@ class FakeLessonRepository implements LessonRepository {
   @override
   Future<Set<SlotId>> takenSlotsOf(UserId professor) async {
     _failSwitch.check();
-    return {
-      for (final lesson in _lessons)
-        if (lesson.professorId == professor && lesson.status is Confirmed) lesson.slotId,
-    };
+    return takenSlots(_lessons.where((lesson) => lesson.professorId == professor));
   }
 
   @override

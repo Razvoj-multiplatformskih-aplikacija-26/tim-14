@@ -9,9 +9,6 @@ const student = User(id: UserId('ana'), name: 'Ana', role: Role.student);
 const professor = User(id: UserId('milica'), name: 'Milica', role: Role.professor);
 const admin = User(id: UserId('jovana'), name: 'Jovana', role: Role.admin);
 
-// Pravilo backoffice-a za testove sesije. Pravo pravilo (AccessPolicy.canUseBackoffice) daje aplikacija.
-bool backoffice(User user) => user.role != Role.student;
-
 final message = RequestMessage.parse('Treba mi pomoć oko integrala.').valueOrNull!;
 
 final linkedIn = LinkedInUrl.parse('https://www.linkedin.com/in/jelena-petrovic').valueOrNull!;
@@ -89,10 +86,7 @@ final class InMemoryLessonRepository implements LessonRepository {
   @override
   Future<Set<SlotId>> takenSlotsOf(UserId professor) async {
     _check();
-    return {
-      for (final lesson in lessons)
-        if (lesson.professorId == professor && lesson.status is Confirmed) lesson.slotId,
-    };
+    return takenSlots(lessons.where((lesson) => lesson.professorId == professor));
   }
 
   @override

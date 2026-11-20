@@ -4,7 +4,6 @@
 /// | Here                                    | Replaced by                                     |
 /// |-----------------------------------------|-------------------------------------------------|
 /// | [signedIn], [currentUser], [findUserIn] | I4: the JWT middleware and its `currentUser`     |
-/// | [canView]                               | I1: `AccessPolicy.canView`                       |
 /// | [problemOf]                             | I3: `error.toProblem()`                          |
 /// | [lessonJson], [profileJson], …          | I2/I3: `lesson.toDto().toJson()`, …              |
 ///
@@ -67,14 +66,6 @@ FindUser findUserIn(Database database) =>
         role: Role.values.byName(column['role'] as String),
       );
     });
-
-// ---------------------------------------------------------------------------------------------------------------
-// Who may see a lesson (until I1)
-
-/// A lesson is visible to its own student and its own professor, and to nobody else.
-bool canView(User user, Lesson lesson) =>
-    (user.role == Role.student && user.id == lesson.studentId) ||
-    (user.role == Role.professor && user.id == lesson.professorId);
 
 // ---------------------------------------------------------------------------------------------------------------
 // DomainError → ProblemDto (until I3)
