@@ -301,25 +301,7 @@ DemoData demoData(DateTime now) {
 
   return DemoData(
     logins: const {'ucenik1': _ana, 'ucenik2': _nikola, 'profesor1': _milica, 'admin1': _jovana},
-    users: const [
-      _jovana,
-      _milica,
-      _ana,
-      _nikola,
-      _marija,
-      _luka,
-      _teodora,
-      _stefan,
-      _vuk,
-      _mina,
-      _petar,
-      _anaK,
-      _jelena,
-      _milan,
-      _dragan,
-      _ivana,
-      _bojan,
-    ],
+    users: _users,
     profiles: _profiles(dayAt: dayAt, hoursAgo: hoursAgo),
     listings: listings,
     slots: [..._lessonSlots(lessons), ..._freeSlots(listings, dayAt)],
@@ -544,8 +526,30 @@ ProfessorProfile _awaiting(
   ),
 );
 
+const _users = [
+  _jovana,
+  _milica,
+  _ana,
+  _nikola,
+  _marija,
+  _luka,
+  _teodora,
+  _stefan,
+  _vuk,
+  _mina,
+  _petar,
+  _anaK,
+  _jelena,
+  _milan,
+  _dragan,
+  _ivana,
+  _bojan,
+];
+
+String _nameOf(UserId id) => _users.firstWhere((user) => user.id == id).name;
+
 /// A lesson on [listing]: the professor and the length come from the listing, as a request copies them.
-/// The slot is `s-<lesson id>` unless several lessons share one.
+/// Both names are copied too, as `requestLesson` does. The slot is `s-<lesson id>` unless several lessons share one.
 Lesson _lesson(
   String id,
   User student,
@@ -560,7 +564,9 @@ Lesson _lesson(
   slotId: SlotId(slot ?? 's-$id'),
   listingId: listing.id,
   professorId: listing.professorId,
+  professorName: _nameOf(listing.professorId),
   studentId: student.id,
+  studentName: student.name,
   start: start,
   duration: listing.duration,
   message: _parsed(RequestMessage.parse(message)),

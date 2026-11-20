@@ -42,7 +42,10 @@ void main() {
     });
 
     test('refuses after the deadline', () {
-      expect(cancelLesson(confirmed, by: student, now: deadline.add(minute)).errorOrNull, isA<CancellationTooLate>());
+      expect(
+        cancelLesson(confirmed, by: student, now: deadline.add(minute)).errorOrNull,
+        const CancellationTooLate(notice: cancellationNotice),
+      );
     });
 
     test('professor follows the same deadline', () {
@@ -50,7 +53,10 @@ void main() {
         cancelLesson(confirmed, by: professor, now: deadline).valueOrNull!.status,
         Cancelled(by: professor.id, at: deadline),
       );
-      expect(cancelLesson(confirmed, by: professor, now: deadline.add(minute)).errorOrNull, isA<CancellationTooLate>());
+      expect(
+        cancelLesson(confirmed, by: professor, now: deadline.add(minute)).errorOrNull,
+        const CancellationTooLate(notice: cancellationNotice),
+      );
     });
 
     test('a pending request is withdrawn, not cancelled', () {

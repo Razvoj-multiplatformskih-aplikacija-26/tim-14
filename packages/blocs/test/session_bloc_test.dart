@@ -1,5 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:blocs/blocs.dart';
+import 'package:domain/domain.dart';
 import 'package:test/test.dart';
 import 'package:use_cases/use_cases.dart';
 
@@ -13,7 +14,7 @@ void main() {
   SessionBloc buildBloc() => SessionBloc(
     restoreSession: RestoreSession(sessions),
     logOut: LogOut(sessions),
-    admits: backoffice,
+    admits: AccessPolicy.canUseBackoffice,
     expirations: sessions.expirations,
   );
 

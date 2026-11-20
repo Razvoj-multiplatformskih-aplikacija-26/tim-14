@@ -110,7 +110,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Nečitko');
       await tester.pump();
 
-      expect(find.text(const RejectionReasonTooShort(7).message), findsOneWidget);
+      expect(find.text(const RejectionReasonTooShort(7, min: RejectionReason.minLength).message), findsOneWidget);
       final reject = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Odbij'));
       expect(reject.onPressed, isNull);
     });

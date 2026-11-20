@@ -16,7 +16,7 @@ const _malaMatura = ListingId('l-mala-matura');
 const _gimnazija = ListingId('l-gimnazija');
 const _prijemni = ListingId('l-prijemni');
 
-// Lesson ima samo id profesora i oglasa, pa kartica imena čita odavde.
+// Imena profesora za profile i za časove u demo podacima. Ekrani ime čitaju sa časa (lesson.professorName).
 const professorNames = <UserId, String>{
   _milica: 'Milica Jovanović',
   _nikola: 'Nikola Petrović',
@@ -256,7 +256,9 @@ Lesson _lesson(
   slotId: SlotId('s-$id'),
   listingId: listing,
   professorId: professor,
+  professorName: professorNames[professor]!,
   studentId: ana.id,
+  studentName: ana.name,
   start: start,
   duration: LessonDuration.minutes60,
   message: RequestMessage.parse(message).valueOrNull!,

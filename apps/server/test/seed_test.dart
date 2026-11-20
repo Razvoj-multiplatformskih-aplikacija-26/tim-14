@@ -157,7 +157,7 @@ void main() {
       final slots = await professors.slotsOf(milica.id);
       final free = freeSlots(
         slots,
-        lessons: await lessons.lessonsOfProfessor(milica.id),
+        taken: await lessons.takenSlotsOf(milica.id),
         now: seededAt,
       ).where((slot) => !mine.any((lesson) => lesson.slotId == slot.id)).toList();
       final message = RequestMessage.parse('Može li još jedan čas?').valueOrNull!;
@@ -165,6 +165,7 @@ void main() {
       Result<Lesson> request(Slot slot, List<Lesson> studentLessons) => requestLesson(
         id: LessonId('new-${slot.id.value}'),
         slot: slot,
+        professorName: milica.name,
         by: ana,
         message: message,
         studentLessons: studentLessons,
@@ -175,7 +176,7 @@ void main() {
       final third = request(free[0], mine);
       expect(third, isA<Success<Lesson>>());
       final fourth = request(free[1], [...mine, third.valueOrNull!]);
-      expect(fourth, const Failure<Lesson>(TooManyPendingRequests()));
+      expect(fourth, const Failure<Lesson>(TooManyPendingRequests(max: maxPendingRequests)));
     });
 
     test('a confirmed lesson of Milica has started, so she can record it as held', () async {
@@ -191,7 +192,7 @@ void main() {
       final outcomes = [for (final lesson in confirmed) cancelLesson(lesson, by: ana, now: seededAt)];
 
       expect(outcomes.whereType<Success<Lesson>>(), isNotEmpty);
-      expect(outcomes, contains(const Failure<Lesson>(CancellationTooLate())));
+      expect(outcomes, contains(const Failure<Lesson>(CancellationTooLate(notice: cancellationNotice))));
     });
 
     test('Nikola, the second student account, has lessons too', () async {

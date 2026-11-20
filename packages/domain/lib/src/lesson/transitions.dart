@@ -24,9 +24,11 @@ bool mayStillCancel(Lesson lesson, {required DateTime now}) => !now.toUtc().isAf
 
 bool isWaiting(Lesson lesson, {required DateTime now}) => lesson.status is Pending && !hasStarted(lesson, now: now);
 
+// professorName je ime profesora u trenutku zahteva. Čas ga čuva kao snimak, isto kao vreme termina.
 Result<Lesson> requestLesson({
   required LessonId id,
   required Slot slot,
+  required String professorName,
   required User by,
   required RequestMessage message,
   required List<Lesson> studentLessons,
@@ -35,21 +37,23 @@ Result<Lesson> requestLesson({
 }) {
   if (!AccessPolicy.canRequestLesson(by)) return const Failure(NotAllowed());
   final instant = now.toUtc();
-  if (slot.start.isBefore(instant.add(requestNotice))) return const Failure(TooSoonToRequest());
+  if (slot.start.isBefore(instant.add(requestNotice))) return const Failure(TooSoonToRequest(notice: requestNotice));
   final forSlot = slotLessons.where((lesson) => lesson.slotId == slot.id);
   if (forSlot.any((lesson) => lesson.studentId == by.id && !lesson.status.isFinal)) {
     return const Failure(AlreadyRequested());
   }
   if (forSlot.any((lesson) => lesson.status is Confirmed)) return const Failure(SlotTaken());
   final waiting = studentLessons.where((lesson) => lesson.studentId == by.id && isWaiting(lesson, now: instant));
-  if (waiting.length >= maxPendingRequests) return const Failure(TooManyPendingRequests());
+  if (waiting.length >= maxPendingRequests) return const Failure(TooManyPendingRequests(max: maxPendingRequests));
   return Success(
     Lesson(
       id: id,
       slotId: slot.id,
       listingId: slot.listingId,
       professorId: slot.professorId,
+      professorName: professorName,
       studentId: by.id,
+      studentName: by.name,
       start: slot.start,
       duration: slot.duration,
       message: message,
@@ -124,7 +128,7 @@ Result<Lesson> cancelLesson(Lesson lesson, {required User by, required DateTime 
   if (!AccessPolicy.canCancel(by, lesson)) return const Failure(NotAllowed());
   final next = Cancelled(by: by.id, at: now.toUtc());
   if (lesson.status is! Confirmed) return Failure(InvalidTransition(from: lesson.status, to: next));
-  if (!mayStillCancel(lesson, now: now)) return const Failure(CancellationTooLate());
+  if (!mayStillCancel(lesson, now: now)) return const Failure(CancellationTooLate(notice: cancellationNotice));
   return Success(lesson.copyWith(status: next));
 }
 

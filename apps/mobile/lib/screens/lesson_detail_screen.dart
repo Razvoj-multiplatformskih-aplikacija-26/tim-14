@@ -67,7 +67,7 @@ class _LessonDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lesson = item.lesson;
-    final professorName = professorNames[lesson.professorId] ?? 'Profesor';
+    final professorName = lesson.professorName;
     final listingTitle = listingTitles[lesson.listingId] ?? '';
     final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
 

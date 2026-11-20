@@ -7,7 +7,8 @@ void main() {
   final slot = slotAt(lessonStart);
   final other = slotAt(lessonStart.add(const Duration(hours: 2)), id: 's-2');
 
-  List<Slot> free(List<Slot> slots, [List<Lesson> lessons = const []]) => freeSlots(slots, lessons: lessons, now: now);
+  List<Slot> free(List<Slot> slots, [List<Lesson> lessons = const []]) =>
+      freeSlots(slots, taken: takenSlots(lessons), now: now);
 
   Lesson lessonFor(Slot slot, LessonStatus status, {String id = 'lesson-1', UserId? studentId}) =>
       lessonAt(slot.start, id: id, slotId: slot.id.value, studentId: studentId, status: status);
@@ -90,6 +91,7 @@ void main() {
       final result = requestLesson(
         id: const LessonId('new'),
         slot: candidate,
+        professorName: professor.name,
         by: student,
         message: message,
         studentLessons: const [],
@@ -98,5 +100,30 @@ void main() {
       );
       expect(offered.contains(candidate), result.isSuccess, reason: '${candidate.id} → $result');
     }
+  });
+
+  group('takenSlots', () {
+    test('is the slots with a confirmed lesson, and only those', () {
+      final third = slotAt(lessonStart.add(const Duration(hours: 4)), id: 's-3');
+      final lessons = [
+        lessonFor(slot, Confirmed(at: now)),
+        lessonFor(other, const Pending(), id: 'lesson-2'),
+        lessonFor(
+          third,
+          Cancelled(by: student.id, at: now),
+          id: 'lesson-3',
+        ),
+      ];
+      expect(takenSlots(lessons), {slot.id});
+    });
+
+    test('is empty without lessons', () {
+      expect(takenSlots(const []), isEmpty);
+    });
+
+    test('a held or no-show lesson does not take the slot, because the slot is already in the past', () {
+      final lessons = [lessonFor(slot, Held(at: now)), lessonFor(other, NoShow(at: now), id: 'lesson-2')];
+      expect(takenSlots(lessons), isEmpty);
+    });
   });
 }

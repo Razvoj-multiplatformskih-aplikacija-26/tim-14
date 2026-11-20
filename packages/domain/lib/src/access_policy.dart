@@ -4,6 +4,17 @@ import 'professor/professor_profile.dart';
 import 'user.dart';
 
 abstract final class AccessPolicy {
+  // Ko sme u koju aplikaciju. SessionBloc svake aplikacije dobija jedno od ova dva pravila.
+  static bool canUseMobileApp(User user) => user.role == Role.student;
+
+  static bool canUseBackoffice(User user) => user.role == Role.professor || user.role == Role.admin;
+
+  // Čas vide samo njegov učenik i njegov profesor. Server tuđ čas prikazuje kao da ne postoji (404).
+  static bool canView(User user, Lesson lesson) => _isStudentOf(user, lesson) || _isProfessorOf(user, lesson);
+
+  // Diplomu, LinkedIn i razlog odbijanja vidi samo administrator. null je posetilac bez prijave.
+  static bool canSeeVerificationDetails(User? user) => user?.role == Role.admin;
+
   static bool canRequestLesson(User user) => user.role == Role.student;
 
   static bool canWithdraw(User user, Lesson lesson) => _isStudentOf(user, lesson);

@@ -4,8 +4,8 @@ import 'package:test/test.dart';
 void main() {
   group('RequestMessage', () {
     test('is required', () {
-      expect(RequestMessage.parse('').errorOrNull, const InvalidRequestMessage(0));
-      expect(RequestMessage.parse('   ').errorOrNull, const InvalidRequestMessage(0));
+      expect(RequestMessage.parse('').errorOrNull, const InvalidRequestMessage(0, max: RequestMessage.maxLength));
+      expect(RequestMessage.parse('   ').errorOrNull, const InvalidRequestMessage(0, max: RequestMessage.maxLength));
     });
 
     test('trims the text', () {
@@ -18,12 +18,18 @@ void main() {
     });
 
     test('refuses 301 characters', () {
-      expect(RequestMessage.parse('a' * 301).errorOrNull, const InvalidRequestMessage(301));
+      expect(
+        RequestMessage.parse('a' * 301).errorOrNull,
+        const InvalidRequestMessage(301, max: RequestMessage.maxLength),
+      );
     });
 
     test('counts an emoji as one character', () {
       expect(RequestMessage.parse('${'a' * 299}👩‍👩‍👧').isSuccess, isTrue);
-      expect(RequestMessage.parse('${'a' * 300}👍').errorOrNull, const InvalidRequestMessage(301));
+      expect(
+        RequestMessage.parse('${'a' * 300}👍').errorOrNull,
+        const InvalidRequestMessage(301, max: RequestMessage.maxLength),
+      );
     });
 
     test('lengthOf counts like parse', () {
@@ -39,7 +45,7 @@ void main() {
 
     test('accepts up to 500 characters', () {
       expect(LessonNote.parse('a' * 500).isSuccess, isTrue);
-      expect(LessonNote.parse('a' * 501).errorOrNull, const NoteTooLong(501));
+      expect(LessonNote.parse('a' * 501).errorOrNull, const NoteTooLong(501, max: LessonNote.maxLength));
     });
   });
 
@@ -50,7 +56,7 @@ void main() {
 
     test('accepts up to 1000 characters', () {
       expect(ReviewText.parse('a' * 1000).isSuccess, isTrue);
-      expect(ReviewText.parse('a' * 1001).errorOrNull, const ReviewTextTooLong(1001));
+      expect(ReviewText.parse('a' * 1001).errorOrNull, const ReviewTextTooLong(1001, max: ReviewText.maxLength));
     });
   });
 
@@ -65,13 +71,22 @@ void main() {
 
     test('refuses anything shorter', () {
       const tooShort = RejectionReason.minLength - 1;
-      expect(RejectionReason.parse('a' * tooShort).errorOrNull, const RejectionReasonTooShort(tooShort));
-      expect(RejectionReason.parse('   ').errorOrNull, const RejectionReasonTooShort(0));
+      expect(
+        RejectionReason.parse('a' * tooShort).errorOrNull,
+        const RejectionReasonTooShort(tooShort, min: RejectionReason.minLength),
+      );
+      expect(
+        RejectionReason.parse('   ').errorOrNull,
+        const RejectionReasonTooShort(0, min: RejectionReason.minLength),
+      );
     });
 
     test('does not count the spaces it trims', () {
       const tooShort = RejectionReason.minLength - 1;
-      expect(RejectionReason.parse('  ${'a' * tooShort}  ').errorOrNull, const RejectionReasonTooShort(tooShort));
+      expect(
+        RejectionReason.parse('  ${'a' * tooShort}  ').errorOrNull,
+        const RejectionReasonTooShort(tooShort, min: RejectionReason.minLength),
+      );
     });
   });
 

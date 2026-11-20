@@ -4,18 +4,29 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('an empty request message and a too long one get different texts', () {
-    const empty = InvalidRequestMessage(0);
-    const tooLong = InvalidRequestMessage(RequestMessage.maxLength + 1);
+    const empty = InvalidRequestMessage(0, max: 300);
+    const tooLong = InvalidRequestMessage(301, max: 300);
 
     expect(empty.message, 'Poruka ne sme biti prazna.');
-    expect(tooLong.message, contains('${RequestMessage.maxLength}'));
+    expect(tooLong.message, 'Poruka može imati najviše 300 znakova.');
   });
 
-  // Kad se pravilo menja uživo, menja se samo konstanta. Ovi testovi pokazuju da tekst ide za njom.
-  test('rule texts take their numbers from the domain constants', () {
-    expect(const RejectionReasonTooShort(3).message, contains('${RejectionReason.minLength}'));
-    expect(const CancellationTooLate().message, contains('${cancellationNotice.inHours}'));
-    expect(const TooManyPendingRequests().message, contains('$maxPendingRequests'));
+  // Granice ovde namerno nisu jednake konstantama u domenu: tako izgleda greška sa servera na kome je
+  // pravilo promenjeno posle izgradnje aplikacije. Tekst mora da pokaže broj iz greške.
+  test('rule texts take their numbers from the error, not from the domain constants', () {
+    expect(const InvalidRequestMessage(250, max: 200).message, 'Poruka može imati najviše 200 znakova.');
+    expect(const NoteTooLong(450, max: 400).message, 'Beleška može imati najviše 400 znakova.');
+    expect(const ReviewTextTooLong(900, max: 800).message, 'Recenzija može imati najviše 800 znakova.');
+    expect(const RejectionReasonTooShort(3, min: 15).message, 'Razlog mora imati najmanje 15 znakova.');
+    expect(
+      const CancellationTooLate(notice: Duration(hours: 12)).message,
+      'Čas može da se otkaže najkasnije 12 sata pre početka.',
+    );
+    expect(
+      const TooSoonToRequest(notice: Duration(hours: 48)).message,
+      'Termin mora da se zatraži najkasnije 48 sata unapred.',
+    );
+    expect(const TooManyPendingRequests(max: 2).message, 'Učenik već ima 2 zahteva na čekanju.');
   });
 
   // Kasni klijent: lista na ekranu je zastarela, pa tekst kaže šta se u međuvremenu desilo.

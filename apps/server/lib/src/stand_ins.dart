@@ -4,7 +4,6 @@
 /// | Here                                    | Replaced by                                     |
 /// |-----------------------------------------|-------------------------------------------------|
 /// | [signedIn], [currentUser], [findUserIn] | I4: the JWT middleware and its `currentUser`     |
-/// | [canView]                               | I1: `AccessPolicy.canView`                       |
 /// | [problemOf]                             | I3: `error.toProblem()`                          |
 /// | [lessonJson], [profileJson], …          | I2/I3: `lesson.toDto().toJson()`, …              |
 ///
@@ -69,72 +68,53 @@ FindUser findUserIn(Database database) =>
     });
 
 // ---------------------------------------------------------------------------------------------------------------
-// Who may see a lesson (until I1)
-
-/// A lesson is visible to its own student and its own professor, and to nobody else.
-bool canView(User user, Lesson lesson) =>
-    (user.role == Role.student && user.id == lesson.studentId) ||
-    (user.role == Role.professor && user.id == lesson.professorId);
-
-// ---------------------------------------------------------------------------------------------------------------
 // DomainError → ProblemDto (until I3)
 
 /// The code, HTTP status and numbers for each domain error, as in §1.5. A switch over the sealed class with no
 /// default: a new error does not compile until it gets a line here.
 ///
-/// The limits (`max`, `min`, `minutes`) come from the domain's constants until I1 puts them on the errors.
+/// The limits (`max`, `min`, `minutes`) come from the error itself, so the client shows the limit the server applied.
 ProblemDto problemOf(DomainError error) => switch (error) {
   final InvalidRequestMessage e => _problem(
     422,
     'invalid-request-message',
     'Request message empty or too long',
     value: e.length,
-    max: RequestMessage.maxLength,
+    max: e.max,
   ),
-  final NoteTooLong e => _problem(
-    422,
-    'note-too-long',
-    'Lesson note too long',
-    value: e.length,
-    max: LessonNote.maxLength,
-  ),
+  final NoteTooLong e => _problem(422, 'note-too-long', 'Lesson note too long', value: e.length, max: e.max),
   final ReviewTextTooLong e => _problem(
     422,
     'review-text-too-long',
     'Review text too long',
     value: e.length,
-    max: ReviewText.maxLength,
+    max: e.max,
   ),
   final RejectionReasonTooShort e => _problem(
     422,
     'rejection-reason-too-short',
     'Rejection reason too short',
     value: e.length,
-    min: RejectionReason.minLength,
+    min: e.min,
   ),
   final InvalidRating e => _problem(422, 'invalid-rating', 'Rating out of range', value: e.value),
   final InvalidPrice e => _problem(422, 'invalid-price', 'Price out of range', value: e.dinars),
   InvalidLinkedInUrl() => _problem(422, 'invalid-linkedin-url', 'Not a LinkedIn profile URL'),
   SlotInPast() => _problem(422, 'slot-in-past', 'Slot is in the past'),
   SlotNotOnHalfHour() => _problem(422, 'slot-not-on-half-hour', 'Slot does not start on a half hour'),
-  TooSoonToRequest() => _problem(
+  final TooSoonToRequest e => _problem(
     422,
     'too-soon-to-request',
     'Slot starts too soon to request',
-    minutes: requestNotice.inMinutes,
+    minutes: e.notice.inMinutes,
   ),
-  CancellationTooLate() => _problem(
+  final CancellationTooLate e => _problem(
     422,
     'cancellation-too-late',
     'Too late to cancel',
-    minutes: cancellationNotice.inMinutes,
+    minutes: e.notice.inMinutes,
   ),
-  TooManyPendingRequests() => _problem(
-    409,
-    'too-many-pending-requests',
-    'Too many pending requests',
-    max: maxPendingRequests,
-  ),
+  final TooManyPendingRequests e => _problem(409, 'too-many-pending-requests', 'Too many pending requests', max: e.max),
   SlotOverlaps() => _problem(409, 'slot-overlaps', 'Slot overlaps another slot'),
   AlreadyRequested() => _problem(409, 'already-requested', 'Slot already requested by this student'),
   SlotTaken() => _problem(409, 'slot-taken', 'Slot already has a confirmed lesson'),
@@ -189,13 +169,15 @@ ProblemDto _problem(
 /// UTC ISO-8601, the same as `instantToJson` in `api_contract` (not exported from there).
 String _instant(DateTime instant) => instant.toUtc().toIso8601String();
 
-/// `LessonDto` from §1.4, without `professorName` and `studentName`: `Lesson` has no names until I1.
+/// `LessonDto` from §1.4.
 Map<String, Object?> lessonJson(Lesson lesson) => {
   'id': lesson.id.value,
   'slotId': lesson.slotId.value,
   'listingId': lesson.listingId.value,
   'professorId': lesson.professorId.value,
+  'professorName': lesson.professorName,
   'studentId': lesson.studentId.value,
+  'studentName': lesson.studentName,
   'start': _instant(lesson.start),
   'durationMinutes': lesson.duration.minutes,
   'message': lesson.message.text,

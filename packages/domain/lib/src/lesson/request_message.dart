@@ -18,7 +18,7 @@ final class RequestMessage {
   static Result<RequestMessage> parse(String input) {
     final text = input.trim();
     final length = lengthOf(input);
-    if (length == 0 || length > maxLength) return Failure(InvalidRequestMessage(length));
+    if (length == 0 || length > maxLength) return Failure(InvalidRequestMessage(length, max: maxLength));
     return Success(RequestMessage._(text));
   }
 

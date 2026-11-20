@@ -76,7 +76,7 @@ void main() {
 
       final result = await cancel(lesson);
 
-      expect(result, const Failure<Lesson>(CancellationTooLate()));
+      expect(result, const Failure<Lesson>(CancellationTooLate(notice: cancellationNotice)));
       expect(repository.saveCalls, 0);
       expect(repository.lessons.single.status, isA<Confirmed>());
     });

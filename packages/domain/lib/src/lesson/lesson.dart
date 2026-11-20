@@ -12,7 +12,9 @@ final class Lesson {
     required this.slotId,
     required this.listingId,
     required this.professorId,
+    required this.professorName,
     required this.studentId,
+    required this.studentName,
     required DateTime start,
     required this.duration,
     required this.message,
@@ -25,7 +27,12 @@ final class Lesson {
   final SlotId slotId;
   final ListingId listingId;
   final UserId professorId;
+
+  // Imena su prepisana u trenutku zahteva, kao i vreme termina. Ako se ime kasnije promeni,
+  // stari časovi zadržavaju ime koje je važilo kad je zahtev poslat.
+  final String professorName;
   final UserId studentId;
+  final String studentName;
   final DateTime start;
   final LessonDuration duration;
   final RequestMessage message;
@@ -40,7 +47,9 @@ final class Lesson {
       slotId: slotId,
       listingId: listingId,
       professorId: professorId,
+      professorName: professorName,
       studentId: studentId,
+      studentName: studentName,
       start: start,
       duration: duration,
       message: message,
@@ -56,7 +65,9 @@ final class Lesson {
       other.slotId == slotId &&
       other.listingId == listingId &&
       other.professorId == professorId &&
+      other.professorName == professorName &&
       other.studentId == studentId &&
+      other.studentName == studentName &&
       other.start == start &&
       other.duration == duration &&
       other.message == message &&
@@ -64,8 +75,20 @@ final class Lesson {
       other.status == status;
 
   @override
-  int get hashCode =>
-      Object.hash(id, slotId, listingId, professorId, studentId, start, duration, message, createdAt, status);
+  int get hashCode => Object.hash(
+    id,
+    slotId,
+    listingId,
+    professorId,
+    professorName,
+    studentId,
+    studentName,
+    start,
+    duration,
+    message,
+    createdAt,
+    status,
+  );
 
   @override
   String toString() => 'Lesson($id, ${start.toIso8601String()}, $status)';

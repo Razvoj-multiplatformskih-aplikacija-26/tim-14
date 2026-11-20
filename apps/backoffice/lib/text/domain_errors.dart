@@ -1,31 +1,31 @@
 import 'package:domain/domain.dart';
 
 // Srpski tekst za svaku grešku iz domena. Switch nema default granu, pa nova greška u domenu
-// ne prolazi kompajler dok ne dobije tekst ovde. Brojevi za sad dolaze iz konstanti domena.
-// Kad greške ponesu svoju granicu (Ilijin I1), brojevi se čitaju iz greške, npr. InvalidRequestMessage(:final max).
+// ne prolazi kompajler dok ne dobije tekst ovde. Brojevi pravila se čitaju iz greške (npr.
+// InvalidRequestMessage(:final max)), pa poruka kaže granicu koju je server stvarno primenio.
 //
 // Greške koje dobije kasni klijent (lista na ekranu je zastarela) kažu šta se u međuvremenu desilo.
 // Posle njih Bloc tiho osveži listu, pa tekst može da kaže i to.
 extension DomainErrorText on DomainError {
   String get message => switch (this) {
     InvalidRequestMessage(length: 0) => 'Poruka ne sme biti prazna.',
-    InvalidRequestMessage() => 'Poruka može imati najviše ${RequestMessage.maxLength} znakova.',
-    NoteTooLong() => 'Beleška može imati najviše ${LessonNote.maxLength} znakova.',
-    ReviewTextTooLong() => 'Recenzija može imati najviše ${ReviewText.maxLength} znakova.',
+    InvalidRequestMessage(:final max) => 'Poruka može imati najviše $max znakova.',
+    NoteTooLong(:final max) => 'Beleška može imati najviše $max znakova.',
+    ReviewTextTooLong(:final max) => 'Recenzija može imati najviše $max znakova.',
     InvalidRating() => 'Ocena mora biti od ${Rating.min} do ${Rating.max}.',
     InvalidPrice() => 'Cena mora biti veća od 0 dinara.',
     InvalidLinkedInUrl() => 'LinkedIn adresa mora biti u obliku https://linkedin.com/in/ime.',
-    RejectionReasonTooShort() => 'Razlog mora imati najmanje ${RejectionReason.minLength} znakova.',
+    RejectionReasonTooShort(:final min) => 'Razlog mora imati najmanje $min znakova.',
     SlotInPast() => 'Termin je već prošao.',
     SlotNotOnHalfHour() => 'Termin mora da počne na pun sat ili pola sata.',
     SlotOverlaps() => 'Termin se preklapa sa postojećim terminom.',
-    TooSoonToRequest() => 'Termin mora da se zatraži najkasnije ${requestNotice.inHours} sata unapred.',
-    TooManyPendingRequests() => 'Učenik već ima $maxPendingRequests zahteva na čekanju.',
+    TooSoonToRequest(:final notice) => 'Termin mora da se zatraži najkasnije ${notice.inHours} sata unapred.',
+    TooManyPendingRequests(:final max) => 'Učenik već ima $max zahteva na čekanju.',
     AlreadyRequested() => 'Za ovaj termin zahtev je već poslat.',
     SlotTaken() => 'Termin je u međuvremenu zauzet. Lista je osvežena.',
     LessonStarted() => 'Čas je već počeo.',
     LessonNotStarted() => 'Čas još nije počeo. Ishod se upisuje posle početka.',
-    CancellationTooLate() => 'Čas može da se otkaže najkasnije ${cancellationNotice.inHours} sata pre početka.',
+    CancellationTooLate(:final notice) => 'Čas može da se otkaže najkasnije ${notice.inHours} sata pre početka.',
     InvalidTransition(from: Cancelled(), to: Confirmed() || Rejected()) => 'Učenik je u međuvremenu povukao zahtev.',
     InvalidTransition(from: Cancelled()) => 'Učenik je u međuvremenu otkazao čas.',
     // Dugmad zavise od statusa, pa ostali prelazi stižu samo kad je lista zastarela.

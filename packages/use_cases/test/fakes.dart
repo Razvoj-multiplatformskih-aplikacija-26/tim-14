@@ -33,7 +33,9 @@ Lesson lessonAt(
   slotId: SlotId(slotId),
   listingId: math,
   professorId: professorId ?? professor.id,
+  professorName: professor.name,
   studentId: studentId ?? student.id,
+  studentName: student.name,
   start: start,
   duration: LessonDuration.minutes60,
   message: message,
@@ -94,10 +96,7 @@ final class InMemoryLessonRepository implements LessonRepository {
   @override
   Future<Set<SlotId>> takenSlotsOf(UserId professor) async {
     _check();
-    return {
-      for (final lesson in lessons)
-        if (lesson.professorId == professor && lesson.status is Confirmed) lesson.slotId,
-    };
+    return takenSlots(lessons.where((lesson) => lesson.professorId == professor));
   }
 
   @override

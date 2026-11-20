@@ -25,14 +25,13 @@ final class GetProfessorPage {
     final profile = await _professors.profile(professor);
     final listings = await _professors.listingsOf(professor);
     final slots = await _professors.slotsOf(professor);
-    // Posle Ilijinog domenskog PR-a (I1): freeSlots(slots, taken: await _lessons.takenSlotsOf(professor), now: …),
-    // da stranica profesora ne učitava tuđe časove.
-    final lessons = await _lessons.lessonsOfProfessor(professor);
+    // Samo koji termini su zauzeti, ne tuđi časovi: učenik ne sme da vidi tuđe zahteve i poruke.
+    final taken = await _lessons.takenSlotsOf(professor);
 
     return ProfessorPage(
       profile: profile,
       listings: listings,
-      freeSlots: freeSlots(slots, lessons: lessons, now: _clock.now()),
+      freeSlots: freeSlots(slots, taken: taken, now: _clock.now()),
     );
   }
 }

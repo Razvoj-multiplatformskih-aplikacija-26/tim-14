@@ -17,7 +17,7 @@ final class ReviewText {
   static Result<ReviewText> parse(String input) {
     final text = input.trim();
     final length = text.characters.length;
-    if (length > maxLength) return Failure(ReviewTextTooLong(length));
+    if (length > maxLength) return Failure(ReviewTextTooLong(length, max: maxLength));
     return Success(ReviewText._(text));
   }
 

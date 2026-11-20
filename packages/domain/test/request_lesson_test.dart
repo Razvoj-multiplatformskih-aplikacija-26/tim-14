@@ -14,6 +14,7 @@ void main() {
   }) => requestLesson(
     id: const LessonId('new'),
     slot: slot,
+    professorName: professor.name,
     by: by,
     message: message,
     studentLessons: studentLessons,
@@ -34,13 +35,35 @@ void main() {
     expect(lesson.createdAt, now);
   });
 
+  test('copies both names onto the lesson, the student name from the caller', () {
+    final lesson = request().valueOrNull!;
+    expect(lesson.professorName, professor.name);
+    expect(lesson.studentName, student.name);
+  });
+
+  test('two lessons that differ only in a name are not equal', () {
+    final lesson = request().valueOrNull!;
+    final renamed = requestLesson(
+      id: lesson.id,
+      slot: slot,
+      professorName: 'Drugo ime',
+      by: student,
+      message: message,
+      studentLessons: const [],
+      slotLessons: const [],
+      now: now,
+    ).valueOrNull!;
+    expect(renamed, isNot(lesson));
+    expect(lesson.copyWith(status: Confirmed(at: now)).professorName, lesson.professorName);
+  });
+
   test('accepts a slot exactly 24 hours ahead', () {
     expect(request(at: lessonStart.subtract(requestNotice)).isSuccess, isTrue);
   });
 
   test('refuses a slot less than 24 hours ahead', () {
     final at = lessonStart.subtract(requestNotice).add(const Duration(minutes: 1));
-    expect(request(at: at).errorOrNull, isA<TooSoonToRequest>());
+    expect(request(at: at).errorOrNull, const TooSoonToRequest(notice: requestNotice));
   });
 
   group('pending limit', () {
@@ -49,7 +72,10 @@ void main() {
     ];
 
     test('refuses a fourth pending request', () {
-      expect(request(studentLessons: pendingAt(lessonStart)).errorOrNull, isA<TooManyPendingRequests>());
+      expect(
+        request(studentLessons: pendingAt(lessonStart)).errorOrNull,
+        const TooManyPendingRequests(max: maxPendingRequests),
+      );
     });
 
     test('does not count requests whose slot has started', () {
