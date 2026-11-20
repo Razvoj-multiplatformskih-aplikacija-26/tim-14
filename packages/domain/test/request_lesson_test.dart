@@ -14,6 +14,7 @@ void main() {
   }) => requestLesson(
     id: const LessonId('new'),
     slot: slot,
+    professorName: professor.name,
     by: by,
     message: message,
     studentLessons: studentLessons,
@@ -32,6 +33,28 @@ void main() {
     expect(lesson.end, slot.end);
     expect(lesson.message, message);
     expect(lesson.createdAt, now);
+  });
+
+  test('copies both names onto the lesson, the student name from the caller', () {
+    final lesson = request().valueOrNull!;
+    expect(lesson.professorName, professor.name);
+    expect(lesson.studentName, student.name);
+  });
+
+  test('two lessons that differ only in a name are not equal', () {
+    final lesson = request().valueOrNull!;
+    final renamed = requestLesson(
+      id: lesson.id,
+      slot: slot,
+      professorName: 'Drugo ime',
+      by: student,
+      message: message,
+      studentLessons: const [],
+      slotLessons: const [],
+      now: now,
+    ).valueOrNull!;
+    expect(renamed, isNot(lesson));
+    expect(lesson.copyWith(status: Confirmed(at: now)).professorName, lesson.professorName);
   });
 
   test('accepts a slot exactly 24 hours ahead', () {

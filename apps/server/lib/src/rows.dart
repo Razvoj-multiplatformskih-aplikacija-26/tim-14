@@ -154,8 +154,8 @@ Slot slotFromRow(ResultRow row) {
 }
 
 const lessonColumns = '''
-  id, slot_id, listing_id, professor_id, student_id, starts_at, duration_minutes, message, created_at,
-  status, status_at, rejection_cause, cancelled_by, note''';
+  id, slot_id, listing_id, professor_id, professor_name, student_id, student_name, starts_at, duration_minutes,
+  message, created_at, status, status_at, rejection_cause, cancelled_by, note''';
 
 Lesson lessonFromRow(ResultRow row) {
   final column = row.toColumnMap();
@@ -164,7 +164,9 @@ Lesson lessonFromRow(ResultRow row) {
     slotId: SlotId(column['slot_id'] as String),
     listingId: ListingId(column['listing_id'] as String),
     professorId: UserId(column['professor_id'] as String),
+    professorName: column['professor_name'] as String,
     studentId: UserId(column['student_id'] as String),
+    studentName: column['student_name'] as String,
     start: _utc(column['starts_at']),
     duration: durationOf(column['duration_minutes'] as int),
     message: stored(RequestMessage.parse(column['message'] as String)),

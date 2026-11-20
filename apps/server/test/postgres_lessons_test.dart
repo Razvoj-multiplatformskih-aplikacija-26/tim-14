@@ -51,7 +51,7 @@ void main() {
   test('a request goes in through RequestLesson and reads back equal, with both names copied', () async {
     final slot = (await professors.findSlot(const SlotId('s-1')))!;
 
-    final result = await RequestLesson(lessons, FixedClock(), ana)(slot: slot, text: requestText);
+    final result = await RequestLesson(lessons, professors, FixedClock(), ana)(slot: slot, text: requestText);
 
     final created = result.valueOrNull!;
     expect(await lessons.find(created.id), created);

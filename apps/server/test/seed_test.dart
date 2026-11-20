@@ -165,6 +165,7 @@ void main() {
       Result<Lesson> request(Slot slot, List<Lesson> studentLessons) => requestLesson(
         id: LessonId('new-${slot.id.value}'),
         slot: slot,
+        professorName: milica.name,
         by: ana,
         message: message,
         studentLessons: studentLessons,

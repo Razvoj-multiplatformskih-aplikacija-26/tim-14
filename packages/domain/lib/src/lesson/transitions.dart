@@ -24,9 +24,11 @@ bool mayStillCancel(Lesson lesson, {required DateTime now}) => !now.toUtc().isAf
 
 bool isWaiting(Lesson lesson, {required DateTime now}) => lesson.status is Pending && !hasStarted(lesson, now: now);
 
+// professorName je ime profesora u trenutku zahteva. Čas ga čuva kao snimak, isto kao vreme termina.
 Result<Lesson> requestLesson({
   required LessonId id,
   required Slot slot,
+  required String professorName,
   required User by,
   required RequestMessage message,
   required List<Lesson> studentLessons,
@@ -49,7 +51,9 @@ Result<Lesson> requestLesson({
       slotId: slot.id,
       listingId: slot.listingId,
       professorId: slot.professorId,
+      professorName: professorName,
       studentId: by.id,
+      studentName: by.name,
       start: slot.start,
       duration: slot.duration,
       message: message,

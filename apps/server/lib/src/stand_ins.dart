@@ -178,13 +178,15 @@ ProblemDto _problem(
 /// UTC ISO-8601, the same as `instantToJson` in `api_contract` (not exported from there).
 String _instant(DateTime instant) => instant.toUtc().toIso8601String();
 
-/// `LessonDto` from §1.4, without `professorName` and `studentName`: `Lesson` has no names until I1.
+/// `LessonDto` from §1.4.
 Map<String, Object?> lessonJson(Lesson lesson) => {
   'id': lesson.id.value,
   'slotId': lesson.slotId.value,
   'listingId': lesson.listingId.value,
   'professorId': lesson.professorId.value,
+  'professorName': lesson.professorName,
   'studentId': lesson.studentId.value,
+  'studentName': lesson.studentName,
   'start': _instant(lesson.start),
   'durationMinutes': lesson.duration.minutes,
   'message': lesson.message.text,

@@ -35,7 +35,7 @@ void main() {
     final clock = FixedClock(now);
     return RequestFormBloc(
       GetProfessorPage(professors, lessons, clock),
-      RequestLesson(lessons, clock, student),
+      RequestLesson(lessons, professors, clock, student),
       milica.id,
       slotId ?? slot.id,
     );

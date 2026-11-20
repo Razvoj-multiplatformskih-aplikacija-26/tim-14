@@ -125,15 +125,14 @@ final class PostgresLessons implements LessonRepository {
 /// Inserts one lesson row on [db], which is a pool connection or an open transaction. `create` uses it for a new
 /// request, and the seed uses it inside its one transaction.
 ///
-/// Both names are copied from `users` at this moment, a snapshot like the slot's time: a later rename does not
-/// rewrite old lessons. (Until Ilija's I1 puts the names on `Lesson` itself.)
+/// Both names come from the lesson, which copied them when the request was made: a snapshot like the slot's
+/// time, so a later rename does not rewrite old lessons.
 Future<void> insertLessonRow(Session db, Lesson lesson) => db.execute(
   Sql.named('''
       INSERT INTO lessons (id, slot_id, listing_id, professor_id, professor_name, student_id, student_name,
                            starts_at, duration_minutes, message, created_at,
                            status, status_at, rejection_cause, cancelled_by, note)
-      VALUES (@id, @slot, @listing, @professor, (SELECT name FROM users WHERE id = @professor),
-              @student, (SELECT name FROM users WHERE id = @student),
+      VALUES (@id, @slot, @listing, @professor, @professor_name, @student, @student_name,
               @start:timestamptz, @duration, @message, @created_at:timestamptz,
               @status, @status_at:timestamptz, @rejection_cause, @cancelled_by, @note)'''),
   parameters: {
@@ -141,7 +140,9 @@ Future<void> insertLessonRow(Session db, Lesson lesson) => db.execute(
     'slot': lesson.slotId.value,
     'listing': lesson.listingId.value,
     'professor': lesson.professorId.value,
+    'professor_name': lesson.professorName,
     'student': lesson.studentId.value,
+    'student_name': lesson.studentName,
     'start': lesson.start,
     'duration': lesson.duration.minutes,
     'message': lesson.message.text,

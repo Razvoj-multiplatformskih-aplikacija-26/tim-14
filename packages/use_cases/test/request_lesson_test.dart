@@ -7,9 +7,14 @@ import 'fakes.dart';
 void main() {
   final inThreeDays = now.add(const Duration(days: 3));
 
+  // Ime u profilu je namerno drugačije od professor.name: čas mora da prepiše ime iz repozitorijuma profesora.
+  final professors = InMemoryProfessorRepository(
+    profiles: [ProfessorProfile(id: professor.id, fullName: 'Milica Jovanović', city: City.belgrade, bio: '')],
+  );
+
   test('saves a pending lesson when the rules allow it', () async {
     final repository = InMemoryLessonRepository();
-    final requestLesson = RequestLesson(repository, FixedClock(now), student);
+    final requestLesson = RequestLesson(repository, professors, FixedClock(now), student);
 
     final result = await requestLesson(slot: slotAt(inThreeDays), text: 'Treba mi pomoć oko integrala.');
 
@@ -22,9 +27,18 @@ void main() {
     expect(repository.lessons, [lesson]);
   });
 
+  test('the lesson copies the professor name from the profile and the student name from the caller', () async {
+    final requestLesson = RequestLesson(InMemoryLessonRepository(), professors, FixedClock(now), student);
+
+    final lesson = (await requestLesson(slot: slotAt(inThreeDays), text: 'Zdravo')).valueOrNull!;
+
+    expect(lesson.professorName, 'Milica Jovanović');
+    expect(lesson.studentName, student.name);
+  });
+
   test('an empty message is rejected and nothing is saved', () async {
     final repository = InMemoryLessonRepository();
-    final requestLesson = RequestLesson(repository, FixedClock(now), student);
+    final requestLesson = RequestLesson(repository, professors, FixedClock(now), student);
 
     final result = await requestLesson(slot: slotAt(inThreeDays), text: '   ');
 
@@ -34,7 +48,7 @@ void main() {
 
   test('a slot less than 24 hours away is rejected', () async {
     final repository = InMemoryLessonRepository();
-    final requestLesson = RequestLesson(repository, FixedClock(now), student);
+    final requestLesson = RequestLesson(repository, professors, FixedClock(now), student);
 
     final result = await requestLesson(slot: slotAt(now.add(const Duration(hours: 10))), text: 'Zdravo');
 
@@ -48,7 +62,7 @@ void main() {
       lessonAt(inThreeDays, id: 'b', slotId: 's-b'),
       lessonAt(inThreeDays, id: 'c', slotId: 's-c'),
     ]);
-    final requestLesson = RequestLesson(repository, FixedClock(now), student);
+    final requestLesson = RequestLesson(repository, professors, FixedClock(now), student);
 
     final result = await requestLesson(
       slot: slotAt(inThreeDays, id: 's-d'),
@@ -68,7 +82,7 @@ void main() {
         status: Confirmed(at: now),
       ),
     ]);
-    final requestLesson = RequestLesson(repository, FixedClock(now), student);
+    final requestLesson = RequestLesson(repository, professors, FixedClock(now), student);
 
     final result = await requestLesson(slot: slotAt(inThreeDays), text: 'Zdravo');
 
@@ -78,7 +92,7 @@ void main() {
 
   test('a repository error is passed on', () async {
     final repository = InMemoryLessonRepository()..fail = true;
-    final requestLesson = RequestLesson(repository, FixedClock(now), student);
+    final requestLesson = RequestLesson(repository, professors, FixedClock(now), student);
 
     expect(() => requestLesson(slot: slotAt(inThreeDays), text: 'Zdravo'), throwsA(isA<RepositoryException>()));
   });

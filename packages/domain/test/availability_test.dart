@@ -90,6 +90,7 @@ void main() {
       final result = requestLesson(
         id: const LessonId('new'),
         slot: candidate,
+        professorName: professor.name,
         by: student,
         message: message,
         studentLessons: const [],
