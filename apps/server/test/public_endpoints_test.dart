@@ -6,48 +6,11 @@ import 'package:domain/domain.dart';
 import 'package:http/http.dart' as http;
 import 'package:relic/relic.dart' show IOAdapter, RelicServer;
 import 'package:server/server.dart';
-import 'package:server/src/http.dart' show RecordNotFound;
 import 'package:test/test.dart';
 import 'package:use_cases/use_cases.dart';
 
+import 'support/memory.dart';
 import 'support/unused.dart';
-
-/// Professors in memory, in name order, like the Postgres repository.
-final class MemoryProfessors implements ProfessorRepository {
-  MemoryProfessors(this.profiles, {this.listings = const [], this.slots = const []});
-
-  final List<ProfessorProfile> profiles;
-  final List<Listing> listings;
-  final List<Slot> slots;
-
-  @override
-  Future<ProfessorsPage> professors({int offset = 0, int limit = 20}) async {
-    final page = profiles.skip(offset).take(limit).toList();
-    return ProfessorsPage(
-      items: [for (final profile in page) ProfessorSummary(profile: profile, listings: await listingsOf(profile.id))],
-      nextOffset: offset + limit < profiles.length ? offset + limit : null,
-    );
-  }
-
-  @override
-  Future<ProfessorProfile> profile(UserId id) async =>
-      profiles.where((profile) => profile.id == id).firstOrNull ?? (throw RecordNotFound('No professor $id'));
-
-  @override
-  Future<List<Listing>> listingsOf(UserId professor) async => [
-    for (final listing in listings)
-      if (listing.professorId == professor) listing,
-  ];
-
-  @override
-  Future<List<Slot>> slotsOf(UserId professor) async => [
-    for (final slot in slots)
-      if (slot.professorId == professor) slot,
-  ];
-
-  @override
-  Future<Slot?> findSlot(SlotId id) async => slots.where((slot) => slot.id == id).firstOrNull;
-}
 
 /// Only what the public routes read from lessons: the taken slots.
 final class TakenSlotsOnly implements LessonRepository {

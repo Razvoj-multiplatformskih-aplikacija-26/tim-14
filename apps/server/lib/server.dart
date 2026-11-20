@@ -12,3 +12,4 @@ export 'src/public_handlers.dart';
 export 'src/seed.dart';
 export 'src/sessions.dart';
 export 'src/staff_handlers.dart';
+export 'src/student_handlers.dart';
