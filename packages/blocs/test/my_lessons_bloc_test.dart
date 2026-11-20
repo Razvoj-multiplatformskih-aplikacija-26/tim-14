@@ -46,7 +46,11 @@ void main() {
       const MyLessonsLoading(),
       MyLessonsLoaded([
         LessonItem(lesson: held, action: LessonAction.none),
-        LessonItem(lesson: tooLate, action: LessonAction.cancel, blockedBy: const CancellationTooLate()),
+        LessonItem(
+          lesson: tooLate,
+          action: LessonAction.cancel,
+          blockedBy: const CancellationTooLate(notice: cancellationNotice),
+        ),
         LessonItem(lesson: confirmed, action: LessonAction.cancel),
         LessonItem(lesson: pending, action: LessonAction.withdraw),
       ]),
@@ -127,7 +131,7 @@ void main() {
     expect: () => [
       MyLessonsLoaded([
         LessonItem(lesson: tooLate, action: LessonAction.cancel),
-      ], actionError: const CancellationTooLate()),
+      ], actionError: const CancellationTooLate(notice: cancellationNotice)),
     ],
     verify: (_) => expect(repository.lessons.single.status, isA<Confirmed>()),
   );

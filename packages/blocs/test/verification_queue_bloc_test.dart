@@ -158,7 +158,7 @@ void main() {
       VerificationQueueLoaded(
         [jelena, petar, sara],
         selectedId: jelena.id,
-        notice: const ActionRejected(RejectionReasonTooShort(3)),
+        notice: const ActionRejected(RejectionReasonTooShort(3, min: RejectionReason.minLength)),
       ),
       // Tiho osvežavanje posle odbijanja: isti red, bez notice.
       VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
@@ -173,7 +173,7 @@ void main() {
     seed: () => VerificationQueueLoaded(
       [jelena, petar, sara],
       selectedId: jelena.id,
-      notice: const ActionRejected(RejectionReasonTooShort(3)),
+      notice: const ActionRejected(RejectionReasonTooShort(3, min: RejectionReason.minLength)),
     ),
     act: (bloc) => bloc.add(RejectProfessorPressed('Ne.')),
     expect: () => [
@@ -181,7 +181,7 @@ void main() {
       VerificationQueueLoaded(
         [jelena, petar, sara],
         selectedId: jelena.id,
-        notice: const ActionRejected(RejectionReasonTooShort(3)),
+        notice: const ActionRejected(RejectionReasonTooShort(3, min: RejectionReason.minLength)),
       ),
       VerificationQueueLoaded([jelena, petar, sara], selectedId: jelena.id),
     ],

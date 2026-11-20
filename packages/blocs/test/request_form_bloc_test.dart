@@ -79,7 +79,11 @@ void main() {
     act: (bloc) => bloc.add(MessageChanged('a' * 301)),
     expect: () => [
       isA<RequestFormReady>()
-          .having((state) => state.messageError, 'messageError', const InvalidRequestMessage(301))
+          .having(
+            (state) => state.messageError,
+            'messageError',
+            const InvalidRequestMessage(301, max: RequestMessage.maxLength),
+          )
           .having((state) => state.messageLength, 'messageLength', 301)
           .having((state) => state.canSend, 'canSend', false),
     ],
@@ -132,7 +136,7 @@ void main() {
     skip: 2,
     expect: () => [
       isA<RequestFormReady>()
-          .having((state) => state.submitError, 'submitError', const TooManyPendingRequests())
+          .having((state) => state.submitError, 'submitError', const TooManyPendingRequests(max: maxPendingRequests))
           .having((state) => state.isSending, 'isSending', false),
     ],
   );

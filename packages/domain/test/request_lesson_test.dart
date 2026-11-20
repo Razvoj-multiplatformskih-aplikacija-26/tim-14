@@ -40,7 +40,7 @@ void main() {
 
   test('refuses a slot less than 24 hours ahead', () {
     final at = lessonStart.subtract(requestNotice).add(const Duration(minutes: 1));
-    expect(request(at: at).errorOrNull, isA<TooSoonToRequest>());
+    expect(request(at: at).errorOrNull, const TooSoonToRequest(notice: requestNotice));
   });
 
   group('pending limit', () {
@@ -49,7 +49,10 @@ void main() {
     ];
 
     test('refuses a fourth pending request', () {
-      expect(request(studentLessons: pendingAt(lessonStart)).errorOrNull, isA<TooManyPendingRequests>());
+      expect(
+        request(studentLessons: pendingAt(lessonStart)).errorOrNull,
+        const TooManyPendingRequests(max: maxPendingRequests),
+      );
     });
 
     test('does not count requests whose slot has started', () {

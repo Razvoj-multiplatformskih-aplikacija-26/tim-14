@@ -28,7 +28,7 @@ void main() {
 
     final result = await requestLesson(slot: slotAt(inThreeDays), text: '   ');
 
-    expect(result, const Failure<Lesson>(InvalidRequestMessage(0)));
+    expect(result, const Failure<Lesson>(InvalidRequestMessage(0, max: RequestMessage.maxLength)));
     expect(repository.saveCalls, 0);
   });
 
@@ -38,7 +38,7 @@ void main() {
 
     final result = await requestLesson(slot: slotAt(now.add(const Duration(hours: 10))), text: 'Zdravo');
 
-    expect(result, const Failure<Lesson>(TooSoonToRequest()));
+    expect(result, const Failure<Lesson>(TooSoonToRequest(notice: requestNotice)));
     expect(repository.saveCalls, 0);
   });
 
@@ -55,7 +55,7 @@ void main() {
       text: 'Zdravo',
     );
 
-    expect(result, const Failure<Lesson>(TooManyPendingRequests()));
+    expect(result, const Failure<Lesson>(TooManyPendingRequests(max: maxPendingRequests)));
     expect(repository.saveCalls, 0);
   });
 

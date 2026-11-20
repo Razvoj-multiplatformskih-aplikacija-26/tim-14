@@ -119,7 +119,7 @@ void main() {
 
       final result = await reject(submitted, reason: 'Ne.');
 
-      expect(result, const Failure<ProfessorProfile>(RejectionReasonTooShort(3)));
+      expect(result, const Failure<ProfessorProfile>(RejectionReasonTooShort(3, min: RejectionReason.minLength)));
       expect(repository.saveCalls, 0);
       expect(repository.profiles.single, submitted);
     });

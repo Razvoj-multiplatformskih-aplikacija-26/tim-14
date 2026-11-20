@@ -175,7 +175,7 @@ void main() {
       final third = request(free[0], mine);
       expect(third, isA<Success<Lesson>>());
       final fourth = request(free[1], [...mine, third.valueOrNull!]);
-      expect(fourth, const Failure<Lesson>(TooManyPendingRequests()));
+      expect(fourth, const Failure<Lesson>(TooManyPendingRequests(max: maxPendingRequests)));
     });
 
     test('a confirmed lesson of Milica has started, so she can record it as held', () async {
@@ -191,7 +191,7 @@ void main() {
       final outcomes = [for (final lesson in confirmed) cancelLesson(lesson, by: ana, now: seededAt)];
 
       expect(outcomes.whereType<Success<Lesson>>(), isNotEmpty);
-      expect(outcomes, contains(const Failure<Lesson>(CancellationTooLate())));
+      expect(outcomes, contains(const Failure<Lesson>(CancellationTooLate(notice: cancellationNotice))));
     });
 
     test('Nikola, the second student account, has lessons too', () async {

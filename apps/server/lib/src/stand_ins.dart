@@ -82,59 +82,48 @@ bool canView(User user, Lesson lesson) =>
 /// The code, HTTP status and numbers for each domain error, as in §1.5. A switch over the sealed class with no
 /// default: a new error does not compile until it gets a line here.
 ///
-/// The limits (`max`, `min`, `minutes`) come from the domain's constants until I1 puts them on the errors.
+/// The limits (`max`, `min`, `minutes`) come from the error itself, so the client shows the limit the server applied.
 ProblemDto problemOf(DomainError error) => switch (error) {
   final InvalidRequestMessage e => _problem(
     422,
     'invalid-request-message',
     'Request message empty or too long',
     value: e.length,
-    max: RequestMessage.maxLength,
+    max: e.max,
   ),
-  final NoteTooLong e => _problem(
-    422,
-    'note-too-long',
-    'Lesson note too long',
-    value: e.length,
-    max: LessonNote.maxLength,
-  ),
+  final NoteTooLong e => _problem(422, 'note-too-long', 'Lesson note too long', value: e.length, max: e.max),
   final ReviewTextTooLong e => _problem(
     422,
     'review-text-too-long',
     'Review text too long',
     value: e.length,
-    max: ReviewText.maxLength,
+    max: e.max,
   ),
   final RejectionReasonTooShort e => _problem(
     422,
     'rejection-reason-too-short',
     'Rejection reason too short',
     value: e.length,
-    min: RejectionReason.minLength,
+    min: e.min,
   ),
   final InvalidRating e => _problem(422, 'invalid-rating', 'Rating out of range', value: e.value),
   final InvalidPrice e => _problem(422, 'invalid-price', 'Price out of range', value: e.dinars),
   InvalidLinkedInUrl() => _problem(422, 'invalid-linkedin-url', 'Not a LinkedIn profile URL'),
   SlotInPast() => _problem(422, 'slot-in-past', 'Slot is in the past'),
   SlotNotOnHalfHour() => _problem(422, 'slot-not-on-half-hour', 'Slot does not start on a half hour'),
-  TooSoonToRequest() => _problem(
+  final TooSoonToRequest e => _problem(
     422,
     'too-soon-to-request',
     'Slot starts too soon to request',
-    minutes: requestNotice.inMinutes,
+    minutes: e.notice.inMinutes,
   ),
-  CancellationTooLate() => _problem(
+  final CancellationTooLate e => _problem(
     422,
     'cancellation-too-late',
     'Too late to cancel',
-    minutes: cancellationNotice.inMinutes,
+    minutes: e.notice.inMinutes,
   ),
-  TooManyPendingRequests() => _problem(
-    409,
-    'too-many-pending-requests',
-    'Too many pending requests',
-    max: maxPendingRequests,
-  ),
+  final TooManyPendingRequests e => _problem(409, 'too-many-pending-requests', 'Too many pending requests', max: e.max),
   SlotOverlaps() => _problem(409, 'slot-overlaps', 'Slot overlaps another slot'),
   AlreadyRequested() => _problem(409, 'already-requested', 'Slot already requested by this student'),
   SlotTaken() => _problem(409, 'slot-taken', 'Slot already has a confirmed lesson'),

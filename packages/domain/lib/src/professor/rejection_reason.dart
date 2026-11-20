@@ -15,7 +15,7 @@ final class RejectionReason {
   static Result<RejectionReason> parse(String input) {
     final text = input.trim();
     final length = text.characters.length;
-    if (length < minLength) return Failure(RejectionReasonTooShort(length));
+    if (length < minLength) return Failure(RejectionReasonTooShort(length, min: minLength));
     return Success(RejectionReason._(text));
   }
 
