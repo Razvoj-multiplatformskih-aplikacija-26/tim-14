@@ -2,6 +2,8 @@ import 'package:domain/domain.dart';
 
 const milica = User(id: UserId('milica'), name: 'Milica Jovanović', role: Role.professor);
 const admin = User(id: UserId('admin'), name: 'Jovana Ilić', role: Role.admin);
+// Učenica ima nalog samo da bi se videlo da backoffice odbija učenike.
+const ana = User(id: UserId('ana-markovic'), name: 'Ana Marković', role: Role.student);
 
 const _srednja = ListingId('l-srednja');
 const _malaMatura = ListingId('l-mala-matura');
