@@ -16,21 +16,25 @@ class ProfessorPageLoading extends ProfessorPageState {
   const ProfessorPageLoading();
 }
 
+// Profil nije učitan. Nosi samo vrstu greške, a tekst za ekran pravi aplikacija.
 class ProfessorPageFailure extends ProfessorPageState {
-  const ProfessorPageFailure(this.message);
+  const ProfessorPageFailure(this.failure);
 
-  final String message;
+  final RepositoryFailure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
 class ProfessorPageLoaded extends ProfessorPageState {
-  const ProfessorPageLoaded(this.page);
+  const ProfessorPageLoaded(this.page, {this.refreshFailure});
 
   // Profil, oglasi i slobodni termini profesora.
   final ProfessorPage page;
 
+  // Osvežavanje nije stiglo do servera. Stranica ostaje kakva je bila, a ekran to kaže u SnackBar-u.
+  final RepositoryFailure? refreshFailure;
+
   @override
-  List<Object?> get props => [page];
+  List<Object?> get props => [page, refreshFailure];
 }

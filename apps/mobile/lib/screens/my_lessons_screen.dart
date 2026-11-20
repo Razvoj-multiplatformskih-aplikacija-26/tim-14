@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ui/ui.dart';
+import 'package:use_cases/use_cases.dart';
 
 import '../data/fail_switch.dart';
+import '../text/failures.dart';
 import '../widgets/lesson_card.dart';
 
 class MyLessonsScreen extends StatelessWidget {
@@ -35,8 +37,8 @@ class MyLessonsScreen extends StatelessWidget {
             case MyLessonsInitial():
             case MyLessonsLoading():
               return const Center(child: CircularProgressIndicator());
-            case MyLessonsFailure():
-              return const _FailureView();
+            case MyLessonsFailure(:final failure):
+              return _FailureView(failure: failure);
             case MyLessonsEmpty():
               return const _EmptyView();
             case MyLessonsLoaded():
@@ -49,7 +51,9 @@ class MyLessonsScreen extends StatelessWidget {
 }
 
 class _FailureView extends StatelessWidget {
-  const _FailureView();
+  const _FailureView({required this.failure});
+
+  final RepositoryFailure failure;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +66,8 @@ class _FailureView extends StatelessWidget {
             const Icon(Icons.wifi_off, size: AppSpacing.px48),
             const SizedBox(height: AppSpacing.px16),
             const Text('Časovi trenutno ne mogu da se učitaju.', style: AppTextStyles.bodyBaseMedium),
+            const SizedBox(height: AppSpacing.px8),
+            Text(failure.message, style: AppTextStyles.bodySm, textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.px16),
             FilledButton(
               onPressed: () => context.read<MyLessonsBloc>().add(MyLessonsRetried()),

@@ -81,7 +81,7 @@ void main() {
     await tester.pumpAndSettle();
     await send(tester, 'Treba mi pomoć oko integrala.');
 
-    expect(find.text('Zahtev nije poslat, proveri mrežu i pokušaj ponovo.'), findsOneWidget);
+    expect(find.text('Zahtev nije poslat. Nema veze sa serverom. Proveri internet i pokušaj ponovo.'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Treba mi pomoć oko integrala.'), findsOneWidget);
   });
 

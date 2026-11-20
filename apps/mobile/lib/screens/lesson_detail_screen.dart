@@ -7,6 +7,7 @@ import 'package:ui/ui.dart';
 import '../data/demo_data.dart';
 import '../text/dates.dart';
 import '../text/domain_errors.dart';
+import '../text/failures.dart';
 
 class LessonDetailScreen extends StatelessWidget {
   const LessonDetailScreen({super.key, required this.lessonId});
@@ -18,11 +19,12 @@ class LessonDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Detalj časa')),
       body: BlocConsumer<MyLessonsBloc, MyLessonsState>(
-        // Ako akcija ne prođe, Bloc vrati grešku u actionError, a mi je prikažemo kao SnackBar.
-        listenWhen: (previous, current) => current is MyLessonsLoaded && current.actionError != null,
+        // Ako akcija ne prođe, Bloc javi zašto u notice, a mi to prikažemo kao SnackBar. Posle odbijene akcije
+        // Bloc sam ponovo učita časove, pa detalj pokaže stanje kakvo je sada na serveru.
+        listenWhen: (previous, current) => current is MyLessonsLoaded && current.notice != null,
         listener: (context, state) {
-          final error = (state as MyLessonsLoaded).actionError!;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+          final notice = (state as MyLessonsLoaded).notice!;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(notice.message)));
         },
         builder: (context, state) {
           switch (state) {
@@ -35,6 +37,8 @@ class LessonDetailScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text('Čas trenutno ne može da se učita.', style: AppTextStyles.bodyBaseMedium),
+                    const SizedBox(height: AppSpacing.px8),
+                    Text(state.failure.message, style: AppTextStyles.bodySm, textAlign: TextAlign.center),
                     const SizedBox(height: AppSpacing.px16),
                     FilledButton(
                       onPressed: () => context.read<MyLessonsBloc>().add(MyLessonsRetried()),

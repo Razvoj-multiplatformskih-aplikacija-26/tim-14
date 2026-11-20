@@ -9,6 +9,7 @@ class ProfessorPageBloc extends Bloc<ProfessorPageEvent, ProfessorPageState> {
   ProfessorPageBloc(this._getProfessorPage, this._professorId) : super(const ProfessorPageInitial()) {
     on<ProfessorPageRequested>(_onRequested);
     on<ProfessorPageRetried>(_onRetried);
+    on<ProfessorPageRefreshed>(_onRefreshed);
   }
 
   final GetProfessorPage _getProfessorPage;
@@ -22,13 +23,27 @@ class ProfessorPageBloc extends Bloc<ProfessorPageEvent, ProfessorPageState> {
     await _load(emit);
   }
 
+  // Sa stranicom na ekranu se osvežava tiho. Ako server ne odgovori, stranica ostaje, a ekran kaže zašto.
+  Future<void> _onRefreshed(ProfessorPageRefreshed event, Emitter<ProfessorPageState> emit) async {
+    final current = state;
+    if (current is! ProfessorPageLoaded) {
+      await _load(emit);
+      return;
+    }
+    try {
+      emit(ProfessorPageLoaded(await _getProfessorPage(_professorId)));
+    } on RepositoryException catch (e) {
+      emit(ProfessorPageLoaded(current.page, refreshFailure: e.failure));
+    }
+  }
+
   Future<void> _load(Emitter<ProfessorPageState> emit) async {
     emit(const ProfessorPageLoading());
     try {
       final page = await _getProfessorPage(_professorId);
       emit(ProfessorPageLoaded(page));
     } on RepositoryException catch (e) {
-      emit(ProfessorPageFailure(e.message));
+      emit(ProfessorPageFailure(e.failure));
     }
   }
 }

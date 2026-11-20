@@ -51,15 +51,117 @@ void main() {
     setUp: () => repository = InMemoryProfessorRepository(profiles: [milica])..fail = true,
     build: buildBloc,
     act: (bloc) => bloc.add(ProfessorsRequested()),
-    expect: () => [const ProfessorsLoading(), const ProfessorsFailure('Nema mreže')],
+    expect: () => [const ProfessorsLoading(), const ProfessorsFailure(RepositoryFailure.unavailable)],
   );
 
   blocTest<ProfessorsBloc, ProfessorsState>(
     'retry after a failure loads the professors',
     setUp: () => repository = InMemoryProfessorRepository(profiles: [milica]),
     build: buildBloc,
-    seed: () => const ProfessorsFailure('Nema mreže'),
+    seed: () => const ProfessorsFailure(RepositoryFailure.unavailable),
     act: (bloc) => bloc.add(ProfessorsRetried()),
     expect: () => [const ProfessorsLoading(), isA<ProfessorsLoaded>()],
   );
+
+  group('pages', () {
+    // 25 profesora: prva strana ima 20, druga 5 i nema sledeće.
+    final many = [
+      for (var i = 0; i < 25; i++)
+        ProfessorProfile(id: UserId('p-$i'), fullName: 'Profesor $i', city: City.belgrade, bio: ''),
+    ];
+
+    List<UserId> idsOf(ProfessorsState state) => [
+      for (final item in (state as ProfessorsLoaded).professors) item.profile.id,
+    ];
+
+    blocTest<ProfessorsBloc, ProfessorsState>(
+      'the first page says where the next one starts',
+      setUp: () => repository = InMemoryProfessorRepository(profiles: many),
+      build: buildBloc,
+      act: (bloc) => bloc.add(ProfessorsRequested()),
+      expect: () => [
+        const ProfessorsLoading(),
+        isA<ProfessorsLoaded>()
+            .having((state) => state.professors, 'professors', hasLength(20))
+            .having((state) => state.nextOffset, 'nextOffset', 20),
+      ],
+    );
+
+    blocTest<ProfessorsBloc, ProfessorsState>(
+      'the second page is added after the first, and the last one has no next offset',
+      setUp: () => repository = InMemoryProfessorRepository(profiles: many),
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(ProfessorsRequested());
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(ProfessorsNextPageRequested());
+      },
+      skip: 1,
+      expect: () => [
+        isA<ProfessorsLoaded>().having((state) => state.loadingMore, 'loadingMore', false),
+        isA<ProfessorsLoaded>().having((state) => state.loadingMore, 'loadingMore', true),
+        isA<ProfessorsLoaded>()
+            .having(idsOf, 'ids', [for (final profile in many) profile.id])
+            .having((state) => state.nextOffset, 'nextOffset', isNull)
+            .having((state) => state.hasMore, 'hasMore', false),
+      ],
+    );
+
+    blocTest<ProfessorsBloc, ProfessorsState>(
+      'reaching the end twice while a page loads asks for it only once',
+      setUp: () => repository = InMemoryProfessorRepository(profiles: many),
+      build: buildBloc,
+      seed: () => ProfessorsLoaded(const [], nextOffset: 20),
+      act: (bloc) => bloc
+        ..add(ProfessorsNextPageRequested())
+        ..add(ProfessorsNextPageRequested()),
+      expect: () => [
+        isA<ProfessorsLoaded>().having((state) => state.loadingMore, 'loadingMore', true),
+        isA<ProfessorsLoaded>().having((state) => state.professors, 'professors', hasLength(5)),
+      ],
+    );
+
+    blocTest<ProfessorsBloc, ProfessorsState>(
+      'on the last page the end of the list asks for nothing',
+      setUp: () => repository = InMemoryProfessorRepository(profiles: many),
+      build: buildBloc,
+      seed: () => const ProfessorsLoaded([]),
+      act: (bloc) => bloc.add(ProfessorsNextPageRequested()),
+      expect: () => <ProfessorsState>[],
+    );
+
+    blocTest<ProfessorsBloc, ProfessorsState>(
+      'a next page that cannot be loaded keeps the list and says so at its end',
+      setUp: () => repository = InMemoryProfessorRepository(profiles: many)..fail = true,
+      build: buildBloc,
+      seed: () => ProfessorsLoaded(const [], nextOffset: 20),
+      act: (bloc) => bloc.add(ProfessorsNextPageRequested()),
+      expect: () => [
+        ProfessorsLoaded(const [], nextOffset: 20, loadingMore: true),
+        ProfessorsLoaded(const [], nextOffset: 20, moreFailure: RepositoryFailure.unavailable),
+      ],
+    );
+
+    blocTest<ProfessorsBloc, ProfessorsState>(
+      'refreshing starts again from the first page, quietly',
+      setUp: () => repository = InMemoryProfessorRepository(profiles: many),
+      build: buildBloc,
+      seed: () => const ProfessorsLoaded([]),
+      act: (bloc) => bloc.add(ProfessorsRefreshed()),
+      expect: () => [
+        isA<ProfessorsLoaded>()
+            .having((state) => state.professors, 'professors', hasLength(20))
+            .having((state) => state.nextOffset, 'nextOffset', 20),
+      ],
+    );
+
+    blocTest<ProfessorsBloc, ProfessorsState>(
+      'a refresh that cannot reach the server keeps the list and says why',
+      setUp: () => repository = InMemoryProfessorRepository(profiles: many)..fail = true,
+      build: buildBloc,
+      seed: () => ProfessorsLoaded(const [], nextOffset: 20),
+      act: (bloc) => bloc.add(ProfessorsRefreshed()),
+      expect: () => [ProfessorsLoaded(const [], nextOffset: 20, refreshFailure: RepositoryFailure.unavailable)],
+    );
+  });
 }

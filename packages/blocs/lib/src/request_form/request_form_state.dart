@@ -1,5 +1,6 @@
 import 'package:domain/domain.dart';
 import 'package:equatable/equatable.dart';
+import 'package:use_cases/use_cases.dart';
 
 sealed class RequestFormState extends Equatable {
   const RequestFormState();
@@ -12,16 +13,18 @@ class RequestFormLoading extends RequestFormState {
   const RequestFormLoading();
 }
 
+// Forma nije učitana. Nosi samo vrstu greške, a tekst za ekran pravi aplikacija.
 class RequestFormLoadFailure extends RequestFormState {
-  const RequestFormLoadFailure(this.message);
+  const RequestFormLoadFailure(this.failure);
 
-  final String message;
+  final RepositoryFailure failure;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [failure];
 }
 
-// Termin je u međuvremenu zauzet ili je prošao, pa forma nema šta da pošalje.
+// Termin je u međuvremenu zauzet ili je prošao, pa forma nema šta da pošalje. Isto stanje dolazi i kad
+// server pri slanju javi da je termin zauzet: drugi učenik je bio brži, i profesor je njegov zahtev već potvrdio.
 class RequestFormSlotGone extends RequestFormState {
   const RequestFormSlotGone();
 }
@@ -54,8 +57,8 @@ class RequestFormReady extends RequestFormState {
   // Pravilo iz domena koje nije prošlo pri slanju, npr. već 3 zahteva na čekanju.
   final DomainError? submitError;
 
-  // Slanje nije stiglo do repozitorijuma.
-  final String? networkError;
+  // Slanje nije stiglo do servera (ili je prijava istekla). Poruka ostaje u polju, pa može da se pošalje ponovo.
+  final RepositoryFailure? networkError;
 
   bool get canSend => message.trim().isNotEmpty && messageError == null && !isSending;
 

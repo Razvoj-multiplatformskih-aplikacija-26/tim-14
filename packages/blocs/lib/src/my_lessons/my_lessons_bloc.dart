@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:domain/domain.dart';
 import 'package:use_cases/use_cases.dart';
 
+import '../action_notice.dart';
 import 'my_lessons_event.dart';
 import 'my_lessons_state.dart';
 
@@ -10,6 +11,7 @@ class MyLessonsBloc extends Bloc<MyLessonsEvent, MyLessonsState> {
     : super(const MyLessonsInitial()) {
     on<MyLessonsRequested>(_onRequested);
     on<MyLessonsRetried>(_onRetried);
+    on<MyLessonsRefreshed>(_onRefreshed);
     on<LessonWithdrawn>(_onWithdrawn);
     on<LessonCancelled>(_onCancelled);
   }
@@ -28,49 +30,79 @@ class MyLessonsBloc extends Bloc<MyLessonsEvent, MyLessonsState> {
     await _load(emit);
   }
 
-  Future<void> _onWithdrawn(LessonWithdrawn event, Emitter<MyLessonsState> emit) async {
-    try {
-      final result = await _withdraw(event.lesson);
-      await _showResult(result, emit);
-    } on RepositoryException catch (e) {
-      emit(MyLessonsFailure(e.message));
+  // Sa listom na ekranu se osvežava tiho. Bez nje (prvo otvaranje, posle greške) učitava se sa spinerom.
+  Future<void> _onRefreshed(MyLessonsRefreshed event, Emitter<MyLessonsState> emit) async {
+    if (state is MyLessonsLoaded) {
+      await _reload(emit);
+    } else {
+      await _load(emit);
     }
   }
 
+  Future<void> _onWithdrawn(LessonWithdrawn event, Emitter<MyLessonsState> emit) async {
+    await _act(() => _withdraw(event.lesson), emit);
+  }
+
   Future<void> _onCancelled(LessonCancelled event, Emitter<MyLessonsState> emit) async {
+    await _act(() => _cancel(event.lesson), emit);
+  }
+
+  // Isto za povlačenje i otkazivanje.
+  // - Uspeh: tiho ponovno učitavanje, da se vidi stanje kakvo je na serveru.
+  // - Pravilo nije prošlo (u aplikaciji ili na serveru, npr. profesor je u međuvremenu potvrdio čas): prvo poruka,
+  //   pa tiho ponovno učitavanje, jer je lista na ekranu možda zastarela. Tako se ponaša klijent koji je zakasnio.
+  // - Server nije odgovorio: lista ostaje, a poruka kaže zašto. Ceo ekran ne prelazi u grešku.
+  Future<void> _act(Future<Result<Lesson>> Function() action, Emitter<MyLessonsState> emit) async {
     try {
-      final result = await _cancel(event.lesson);
-      await _showResult(result, emit);
+      final result = await action();
+      if (result case Failure(:final error)) {
+        _notify(emit, ActionRejected(error));
+      }
+      await _reload(emit);
     } on RepositoryException catch (e) {
-      emit(MyLessonsFailure(e.message));
+      _notify(emit, ActionFailed(e.failure));
     }
   }
 
   Future<void> _load(Emitter<MyLessonsState> emit) async {
     emit(const MyLessonsLoading());
     try {
-      final lessons = await _getMyLessons();
-      if (lessons.isEmpty) {
-        emit(const MyLessonsEmpty());
-      } else {
-        emit(MyLessonsLoaded(_toItems(lessons)));
-      }
+      _show(await _getMyLessons(), emit);
     } on RepositoryException catch (e) {
-      emit(MyLessonsFailure(e.message));
+      emit(MyLessonsFailure(e.failure));
     }
   }
 
-  // Ako akcija nije uspela, lista ostaje ista i dodaje se greška.
-  // Ako je uspela, ponovo učitamo časove da se vidi novo stanje.
-  Future<void> _showResult(Result<Lesson> result, Emitter<MyLessonsState> emit) async {
+  // Bez spinera: lista ostaje na ekranu dok stižu novi podaci. Novo stanje nema poruku, pa se SnackBar koji je
+  // već na ekranu ne pokaže ponovo.
+  Future<void> _reload(Emitter<MyLessonsState> emit) async {
+    try {
+      _show(await _getMyLessons(), emit);
+    } on RepositoryException catch (e) {
+      _notify(emit, ActionFailed(e.failure));
+    }
+  }
+
+  void _show(List<Lesson> lessons, Emitter<MyLessonsState> emit) {
+    if (lessons.isEmpty) {
+      emit(const MyLessonsEmpty());
+    } else {
+      emit(MyLessonsLoaded(_toItems(lessons)));
+    }
+  }
+
+  // Poruka uz listu koja je već na ekranu. Prvo stanje bez poruke, pa sa njom: tako ista poruka dva puta zaredom
+  // ipak stigne do ekrana, jer su dva jednaka stanja za Bloc jedno isto stanje.
+  void _notify(Emitter<MyLessonsState> emit, ActionNotice notice) {
     final current = state;
-    if (result is Failure<Lesson> && current is MyLessonsLoaded) {
-      emit(MyLessonsLoaded(current.items, actionError: result.error));
+    if (current is! MyLessonsLoaded) {
+      if (notice case ActionFailed(:final failure)) {
+        emit(MyLessonsFailure(failure));
+      }
       return;
     }
-
-    final lessons = await _getMyLessons();
-    emit(MyLessonsLoaded(_toItems(lessons)));
+    emit(MyLessonsLoaded(current.items));
+    emit(MyLessonsLoaded(current.items, notice: notice));
   }
 
   // Za svaki čas unapred proverimo da li akcija može, pa ekran ne mora da zna pravila.
