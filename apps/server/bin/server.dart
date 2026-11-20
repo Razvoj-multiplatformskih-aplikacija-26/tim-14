@@ -18,6 +18,7 @@ Future<void> main() async {
     buildHandler(
       corsOrigins: config.corsOrigins,
       lessons: PostgresLessons(database),
+      professors: PostgresProfessors(database),
       verifications: PostgresVerifications(database),
       sessions: SessionHandlers(
         accounts: PostgresAccountStore(database),

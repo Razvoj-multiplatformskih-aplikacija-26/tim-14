@@ -56,6 +56,7 @@ void main() {
       buildHandler(
         corsOrigins: const [],
         lessons: PostgresLessons(database),
+        professors: PostgresProfessors(database),
         verifications: PostgresVerifications(database),
         sessions: sessions,
         clock: clock,

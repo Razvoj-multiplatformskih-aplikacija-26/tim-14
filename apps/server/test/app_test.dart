@@ -24,6 +24,7 @@ void main() {
       buildHandler(
         corsOrigins: const [backoffice],
         lessons: UnusedLessons(),
+        professors: UnusedProfessors(),
         verifications: UnusedVerifications(),
         sessions: testSessions(),
       ),

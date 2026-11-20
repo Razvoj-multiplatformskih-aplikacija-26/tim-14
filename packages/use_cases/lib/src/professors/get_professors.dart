@@ -7,5 +7,5 @@ final class GetProfessors {
   final ProfessorRepository _professors;
 
   // Strana po strana: sledeća strana se traži sa offset = nextOffset prethodne.
-  Future<ProfessorsPage> call({int offset = 0}) => _professors.professors(offset: offset);
+  Future<ProfessorsPage> call({int offset = 0, int limit = 20}) => _professors.professors(offset: offset, limit: limit);
 }

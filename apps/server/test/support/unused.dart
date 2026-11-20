@@ -9,6 +9,11 @@ final class UnusedLessons implements LessonRepository {
   Never noSuchMethod(Invocation invocation) => throw StateError('This test does not use lessons');
 }
 
+final class UnusedProfessors implements ProfessorRepository {
+  @override
+  Never noSuchMethod(Invocation invocation) => throw StateError('This test does not use professors');
+}
+
 final class UnusedVerifications implements VerificationRepository {
   @override
   Never noSuchMethod(Invocation invocation) => throw StateError('This test does not use verifications');
