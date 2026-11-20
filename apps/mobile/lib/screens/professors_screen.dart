@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ui/ui.dart';
 
 import '../data/fail_switch.dart';
+import '../text/failures.dart';
 import '../widgets/professor_card.dart';
 
 class ProfessorsScreen extends StatelessWidget {
@@ -29,13 +30,19 @@ class ProfessorsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<ProfessorsBloc, ProfessorsState>(
+      body: BlocConsumer<ProfessorsBloc, ProfessorsState>(
+        // Osvežavanje nije stiglo do servera: lista ostaje, a SnackBar kaže zašto.
+        listenWhen: (previous, current) => current is ProfessorsLoaded && current.refreshFailure != null,
+        listener: (context, state) {
+          final failure = (state as ProfessorsLoaded).refreshFailure!;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message)));
+        },
         builder: (context, state) {
           switch (state) {
             case ProfessorsInitial():
             case ProfessorsLoading():
               return const Center(child: CircularProgressIndicator());
-            case ProfessorsFailure():
+            case ProfessorsFailure(:final failure):
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.px24),
@@ -45,6 +52,8 @@ class ProfessorsScreen extends StatelessWidget {
                       const Icon(Icons.wifi_off, size: AppSpacing.px48),
                       const SizedBox(height: AppSpacing.px16),
                       const Text('Profesori trenutno ne mogu da se učitaju.', style: AppTextStyles.bodyBaseMedium),
+                      const SizedBox(height: AppSpacing.px8),
+                      Text(failure.message, style: AppTextStyles.bodySm, textAlign: TextAlign.center),
                       const SizedBox(height: AppSpacing.px16),
                       FilledButton(
                         onPressed: () => context.read<ProfessorsBloc>().add(ProfessorsRetried()),
@@ -59,22 +68,81 @@ class ProfessorsScreen extends StatelessWidget {
                 child: Text('Trenutno nema nijednog profesora.', style: AppTextStyles.bodyBaseMedium),
               );
             case ProfessorsLoaded():
-              return ListView(
-                padding: const EdgeInsets.all(AppSpacing.px16),
-                children: [
-                  for (final professor in state.professors)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.px8),
-                      child: ProfessorCard(
-                        professor: professor,
-                        onTap: () => context.go('/profesori/${professor.profile.id.value}'),
-                      ),
-                    ),
-                ],
-              );
+              return _ProfessorList(state: state);
           }
         },
       ),
+    );
+  }
+}
+
+// Lista sa jednim redom više na kraju. Kad se taj red pojavi na ekranu, a sledeća strana postoji, lista je traži.
+// Ekran ne zna za stranice i offset: samo javi Bloc-u da je stigao do kraja, a red na dnu crta stanje.
+class _ProfessorList extends StatelessWidget {
+  const _ProfessorList({required this.state});
+
+  final ProfessorsLoaded state;
+
+  @override
+  Widget build(BuildContext context) {
+    final professors = state.professors;
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.px16),
+      itemCount: professors.length + 1,
+      itemBuilder: (context, index) {
+        if (index < professors.length) {
+          final professor = professors[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.px8),
+            child: ProfessorCard(
+              professor: professor,
+              onTap: () => context.go('/profesori/${professor.profile.id.value}'),
+            ),
+          );
+        }
+        return _ListEnd(state: state);
+      },
+    );
+  }
+}
+
+class _ListEnd extends StatelessWidget {
+  const _ListEnd({required this.state});
+
+  final ProfessorsLoaded state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.moreFailure case final failure?) {
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.px16),
+        child: Column(
+          children: [
+            Text(failure.message, style: AppTextStyles.bodySm, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.px8),
+            OutlinedButton(
+              onPressed: () => context.read<ProfessorsBloc>().add(ProfessorsNextPageRequested()),
+              child: const Text('Pokušaj ponovo'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (!state.hasMore) {
+      return const SizedBox.shrink();
+    }
+    // Kraj liste je na ekranu: posle ovog crtanja tražimo sledeću stranu. Bloc ignoriše ponovljene zahteve
+    // dok se strana učitava.
+    if (!state.loadingMore) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.read<ProfessorsBloc>().add(ProfessorsNextPageRequested());
+        }
+      });
+    }
+    return const Padding(
+      padding: EdgeInsets.all(AppSpacing.px16),
+      child: Center(child: CircularProgressIndicator()),
     );
   }
 }

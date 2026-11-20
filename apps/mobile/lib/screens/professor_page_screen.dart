@@ -9,6 +9,7 @@ import 'package:use_cases/use_cases.dart';
 import '../data/fail_switch.dart';
 import '../text/catalog.dart';
 import '../text/dates.dart';
+import '../text/failures.dart';
 
 class ProfessorPageScreen extends StatelessWidget {
   const ProfessorPageScreen({super.key, required this.professorId, required this.failSwitch});
@@ -49,13 +50,19 @@ class _ProfessorPageView extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<ProfessorPageBloc, ProfessorPageState>(
+      body: BlocConsumer<ProfessorPageBloc, ProfessorPageState>(
+        // Osvežavanje nije stiglo do servera: stranica ostaje, a SnackBar kaže zašto.
+        listenWhen: (previous, current) => current is ProfessorPageLoaded && current.refreshFailure != null,
+        listener: (context, state) {
+          final failure = (state as ProfessorPageLoaded).refreshFailure!;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message)));
+        },
         builder: (context, state) {
           switch (state) {
             case ProfessorPageInitial():
             case ProfessorPageLoading():
               return const Center(child: CircularProgressIndicator());
-            case ProfessorPageFailure():
+            case ProfessorPageFailure(:final failure):
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.px24),
@@ -65,6 +72,8 @@ class _ProfessorPageView extends StatelessWidget {
                       const Icon(Icons.wifi_off, size: AppSpacing.px48),
                       const SizedBox(height: AppSpacing.px16),
                       const Text('Profil trenutno ne može da se učita.', style: AppTextStyles.bodyBaseMedium),
+                      const SizedBox(height: AppSpacing.px8),
+                      Text(failure.message, style: AppTextStyles.bodySm, textAlign: TextAlign.center),
                       const SizedBox(height: AppSpacing.px16),
                       FilledButton(
                         onPressed: () => context.read<ProfessorPageBloc>().add(ProfessorPageRetried()),

@@ -74,14 +74,56 @@ void main() {
       return buildBloc();
     },
     act: (bloc) => bloc.add(ProfessorPageRequested()),
-    expect: () => [const ProfessorPageLoading(), const ProfessorPageFailure('Nema mreže')],
+    expect: () => [const ProfessorPageLoading(), const ProfessorPageFailure(RepositoryFailure.unavailable)],
   );
 
   blocTest<ProfessorPageBloc, ProfessorPageState>(
     'retry after a failure loads the page',
     build: buildBloc,
-    seed: () => const ProfessorPageFailure('Nema mreže'),
+    seed: () => const ProfessorPageFailure(RepositoryFailure.unavailable),
     act: (bloc) => bloc.add(ProfessorPageRetried()),
     expect: () => [const ProfessorPageLoading(), isA<ProfessorPageLoaded>()],
+  );
+
+  // Dok je profil bio otvoren, profesor je potvrdio tuđi zahtev za slobodan termin.
+  blocTest<ProfessorPageBloc, ProfessorPageState>(
+    'refreshing reloads quietly and drops a slot that was taken meanwhile',
+    build: buildBloc,
+    act: (bloc) async {
+      bloc.add(ProfessorPageRequested());
+      await Future<void>.delayed(Duration.zero);
+      lessons.lessons.add(
+        lessonAt(
+          freeSlot.start,
+          id: 'c-2',
+          slot: 's-free',
+          status: Confirmed(at: now),
+        ),
+      );
+      bloc.add(ProfessorPageRefreshed());
+    },
+    expect: () => [
+      const ProfessorPageLoading(),
+      isA<ProfessorPageLoaded>().having((state) => state.page.freeSlots, 'free slots', [freeSlot]),
+      isA<ProfessorPageLoaded>().having((state) => state.page.freeSlots, 'free slots after refresh', isEmpty),
+    ],
+  );
+
+  blocTest<ProfessorPageBloc, ProfessorPageState>(
+    'a refresh that cannot reach the server keeps the page and says why',
+    build: buildBloc,
+    act: (bloc) async {
+      bloc.add(ProfessorPageRequested());
+      await Future<void>.delayed(Duration.zero);
+      professors.fail = true;
+      bloc.add(ProfessorPageRefreshed());
+    },
+    expect: () => [
+      const ProfessorPageLoading(),
+      isA<ProfessorPageLoaded>().having((state) => state.refreshFailure, 'refreshFailure', isNull),
+      isA<ProfessorPageLoaded>()
+          .having((state) => state.page.freeSlots, 'free slots', [freeSlot])
+          .having((state) => state.refreshFailure, 'refreshFailure', RepositoryFailure.unavailable),
+    ],
   );
 }
