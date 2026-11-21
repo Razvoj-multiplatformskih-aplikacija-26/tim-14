@@ -6,7 +6,6 @@ import 'package:test/test.dart';
 const minimal = {
   'DATABASE_URL': 'postgres://casovi:casovi@localhost:5436/casovi?sslmode=disable',
   'JWT_SECRET': 'dev-only-secret-change-me-0123456789abcdef',
-  'LINKEDIN_API_KEY': 'fake-dev-key',
 };
 
 void main() {
@@ -19,7 +18,9 @@ void main() {
     expect(config.sessionTtl, const Duration(minutes: 480));
     expect(config.secureCookie, isFalse);
     expect(config.demoPassword, isNull);
-    expect(config.linkedInApiKey, 'fake-dev-key');
+    expect(config.resendApiKey, isNull, reason: 'no key: the emails only go to the log');
+    expect(config.mailTo, isNull);
+    expect(config.mailFrom, 'Casovi <onboarding@resend.dev>');
   });
 
   test('values from the environment win over the defaults', () {
@@ -49,6 +50,36 @@ void main() {
       );
     });
   }
+
+  group('email', () {
+    test('a Resend key with MAIL_TO turns sending on', () {
+      final config = ServerConfig.fromEnvironment({
+        ...minimal,
+        'RESEND_API_KEY': 're_123',
+        'MAIL_TO': 'me@example.com',
+        'MAIL_FROM': 'Test <test@example.com>',
+      });
+
+      expect(config.resendApiKey, 're_123');
+      expect(config.mailTo, 'me@example.com');
+      expect(config.mailFrom, 'Test <test@example.com>');
+    });
+
+    test('empty values count as not set, the way Compose passes what .env leaves empty', () {
+      final config = ServerConfig.fromEnvironment({...minimal, 'RESEND_API_KEY': '', 'MAIL_TO': ' ', 'MAIL_FROM': ''});
+
+      expect(config.resendApiKey, isNull);
+      expect(config.mailTo, isNull);
+      expect(config.mailFrom, ServerConfig.defaultMailFrom);
+    });
+
+    test('a key without MAIL_TO stops the server at startup', () {
+      expect(
+        () => ServerConfig.fromEnvironment({...minimal, 'RESEND_API_KEY': 're_123'}),
+        throwsA(isA<StateError>().having((error) => error.message, 'message', contains('MAIL_TO'))),
+      );
+    });
+  });
 
   test('a JWT secret under 32 bytes is refused', () {
     expect(

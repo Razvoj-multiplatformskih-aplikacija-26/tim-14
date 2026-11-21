@@ -4,6 +4,7 @@ import 'package:use_cases/use_cases.dart';
 
 import 'cors.dart';
 import 'http.dart';
+import 'lesson_notifications.dart';
 import 'public_handlers.dart';
 import 'sessions.dart';
 import 'staff_handlers.dart';
@@ -15,19 +16,20 @@ import 'student_handlers.dart';
 /// `/sessions/current`, `/lessons` and `/verifications` also pass [SessionHandlers.signedIn] first, and the public
 /// `/professors` routes pass [SessionHandlers.optionallySignedIn].
 ///
-/// The repositories come in from outside, the way Spring injects beans: `bin/server.dart` passes the Postgres
-/// ones, a test may pass others.
+/// The repositories and the notifications come in from outside, the way Spring injects beans: `bin/server.dart`
+/// passes the Postgres ones and the configured mailer, a test may pass others.
 Handler buildHandler({
   required List<String> corsOrigins,
   required LessonRepository lessons,
   required ProfessorRepository professors,
   required VerificationRepository verifications,
   required SessionHandlers sessions,
+  required LessonNotifications notifications,
   Clock clock = const SystemClock(),
 }) {
   final public = PublicHandlers(professors, lessons);
-  final staff = StaffHandlers(lessons, verifications, clock);
-  final student = StudentHandlers(lessons, professors, clock);
+  final staff = StaffHandlers(lessons, verifications, clock, notifications);
+  final student = StudentHandlers(lessons, professors, clock, notifications);
   final router = RelicRouter()
     ..get(ApiPaths.health, (request) => Response.ok(body: Body.fromString('ok')))
     // Sessions (I4)

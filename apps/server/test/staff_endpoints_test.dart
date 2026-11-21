@@ -13,6 +13,7 @@ import 'package:test/test.dart';
 import 'package:use_cases/use_cases.dart' show Clock;
 
 import 'support/fixture.dart';
+import 'support/mail.dart';
 import 'support/test_database.dart';
 import 'support/unused.dart';
 
@@ -48,6 +49,7 @@ void main() {
   late Uri base;
   final clock = TestClock();
   final sessions = testSessions();
+  final mailer = RecordingMailer();
 
   setUpAll(() async {
     database = await createTestDatabase();
@@ -59,6 +61,7 @@ void main() {
         professors: PostgresProfessors(database),
         verifications: PostgresVerifications(database),
         sessions: sessions,
+        notifications: testNotifications(mailer),
         clock: clock,
       ),
     );
@@ -66,6 +69,7 @@ void main() {
   });
   setUp(() async {
     clock.current = beforeEverything;
+    mailer.sent.clear();
     await truncateTables(database);
     await insertFixture(database);
   });
@@ -170,6 +174,23 @@ void main() {
       expect(await storedStatus('l-nikola'), 'rejected');
     });
 
+    test('after the commit, the confirmed student and the rejected one each get an email', () async {
+      final response = await post('/lessons/l-ana/confirmation', as: 'milica');
+
+      expect(response.statusCode, 200);
+      expect(mailer.subjects, ['[za: Ana Jovanović] Čas je potvrđen', '[za: Nikola Ilić] Termin je zauzet']);
+    });
+
+    test('a refused confirmation emails nobody', () async {
+      expect((await post('/lessons/l-ana/confirmation', as: 'ana')).statusCode, 403);
+      expect((await post('/lessons/l-ana/confirmation', as: 'nikola')).statusCode, 404);
+      expect((await post('/lessons/l-ana/confirmation', as: 'milica')).statusCode, 200);
+      mailer.sent.clear();
+
+      expect((await post('/lessons/l-ana/confirmation', as: 'milica')).statusCode, 409);
+      expect(mailer.sent, isEmpty);
+    });
+
     test("the lesson's own student may see it but not confirm it: 403", () async {
       final response = await post('/lessons/l-ana/confirmation', as: 'ana');
 
@@ -211,6 +232,7 @@ void main() {
     expect(response.statusCode, 200);
     expect(statusOf(bodyOf(response)), {'type': 'rejected', 'cause': 'by_professor', 'at': '2026-11-19T12:00:00.000Z'});
     expect(await storedStatus('l-ana'), 'rejected');
+    expect(mailer.subjects, ['[za: Ana Jovanović] Zahtev je odbijen']);
   });
 
   group('held and no-show', () {

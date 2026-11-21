@@ -4,6 +4,8 @@ export 'src/config.dart';
 export 'src/database.dart';
 export 'src/demo_data.dart';
 export 'src/env_file.dart';
+export 'src/lesson_notifications.dart';
+export 'src/mail.dart';
 export 'src/passwords.dart';
 export 'src/postgres_lessons.dart';
 export 'src/postgres_professors.dart';

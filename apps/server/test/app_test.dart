@@ -7,6 +7,7 @@ import 'package:relic/relic.dart' show IOAdapter, RelicServer;
 import 'package:server/server.dart';
 import 'package:test/test.dart';
 
+import 'support/mail.dart';
 import 'support/unused.dart';
 
 const backoffice = 'http://localhost:8081';
@@ -27,6 +28,7 @@ void main() {
         professors: UnusedProfessors(),
         verifications: UnusedVerifications(),
         sessions: testSessions(),
+        notifications: testNotifications(),
       ),
     );
     base = Uri.parse('http://localhost:${server.port}');
