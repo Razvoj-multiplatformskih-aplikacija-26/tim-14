@@ -9,6 +9,7 @@ import 'package:server/server.dart';
 import 'package:test/test.dart';
 import 'package:use_cases/use_cases.dart';
 
+import 'support/mail.dart';
 import 'support/memory.dart';
 import 'support/unused.dart';
 
@@ -96,6 +97,7 @@ void main() {
         professors: MemoryProfessors([jovan, luka, milica], listings: [listing], slots: slots),
         verifications: UnusedVerifications(),
         sessions: sessions,
+        notifications: testNotifications(),
       ),
     );
     base = Uri.parse('http://localhost:${server.port}');

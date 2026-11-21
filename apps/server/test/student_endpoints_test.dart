@@ -9,6 +9,7 @@ import 'package:server/server.dart';
 import 'package:test/test.dart';
 import 'package:use_cases/use_cases.dart';
 
+import 'support/mail.dart';
 import 'support/memory.dart';
 import 'support/unused.dart';
 
@@ -67,6 +68,7 @@ void main() {
   ];
 
   late MemoryLessons lessons;
+  late RecordingMailer mailer;
   late RelicServer server;
   late Uri base;
   final sessions = testSessions();
@@ -80,6 +82,7 @@ void main() {
       lesson('ana-near', ana, inTenHours, Confirmed(at: fixedNow)),
       lesson('nikola-confirmed', nikola, inThreeDays, Confirmed(at: fixedNow)),
     ]);
+    mailer = RecordingMailer();
     server = RelicServer(() => IOAdapter.bind(InternetAddress.loopbackIPv4, port: 0));
     await server.mountAndStart(
       buildHandler(
@@ -88,6 +91,7 @@ void main() {
         professors: MemoryProfessors([milicasProfile], slots: slots),
         verifications: UnusedVerifications(),
         sessions: sessions,
+        notifications: testNotifications(mailer),
         clock: FixedClock(),
       ),
     );
@@ -196,6 +200,23 @@ void main() {
       expect(created.professorName, 'Milica Jovanović');
       expect(created.start, inThreeDays);
       expect(lessons.stored(LessonId(created.id)), isNotNull);
+    });
+
+    test('emails the professor once the request is stored', () async {
+      final response = await request('s-free-1');
+
+      expect(response.statusCode, 201);
+      expect(mailer.subjects, ['[za: Milica Jovanović] Novi zahtev za čas']);
+      expect(mailer.sent.single.text, contains('Ana Marković traži čas'));
+    });
+
+    test('a refused request emails nobody', () async {
+      expect((await request('s-free-1', message: 'a' * 301)).statusCode, 422);
+      expect((await request('s-soon')).statusCode, 422);
+      expect((await request('no-such-slot')).statusCode, 404);
+      expect((await request('s-free-3', as: jelena)).statusCode, 403);
+
+      expect(mailer.sent, isEmpty);
     });
 
     test('a message of 301 characters is 422 with the length and the limit', () async {

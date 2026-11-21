@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:api_contract/api_contract.dart';
 import 'package:api_mapping/api_mapping.dart';
 import 'package:domain/domain.dart';
@@ -5,6 +7,7 @@ import 'package:relic/relic.dart' hide Result;
 import 'package:use_cases/use_cases.dart';
 
 import 'http.dart';
+import 'lesson_notifications.dart';
 import 'sessions.dart';
 
 /// The lesson endpoints of the student: reading lessons, a new request, withdrawing it and cancelling a confirmed
@@ -16,12 +19,15 @@ import 'sessions.dart';
 /// 3. missing, or not the caller's to see → 404;
 /// 4. build the use case with the caller and run it, so the domain rules decide;
 /// 5. answer with the record, or with the rule's refusal as a problem.
+///
+/// After a new request the handler also starts the professor's email, without waiting for it.
 final class StudentHandlers {
-  StudentHandlers(this._lessons, this._professors, this._clock);
+  StudentHandlers(this._lessons, this._professors, this._clock, this._notifications);
 
   final LessonRepository _lessons;
   final ProfessorRepository _professors;
   final Clock _clock;
+  final LessonNotifications _notifications;
 
   /// `GET /lessons?student=` · `?professor=` · `?slot=`, exactly one of them.
   ///
@@ -68,6 +74,9 @@ final class StudentHandlers {
       return problem(const NotFound());
     }
     final result = await RequestLesson(_lessons, _professors, _clock, caller)(slot: slot, text: body.message);
+    if (result is Success<Lesson>) {
+      unawaited(_notifications.requested(result.value));
+    }
     return respond(result, (lesson) => lesson.toDto().toJson(), status: 201);
   }
 

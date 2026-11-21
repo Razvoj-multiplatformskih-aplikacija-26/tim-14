@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:api_contract/api_contract.dart';
 import 'package:api_mapping/api_mapping.dart';
 import 'package:domain/domain.dart';
@@ -5,6 +7,7 @@ import 'package:relic/relic.dart' hide Result;
 import 'package:use_cases/use_cases.dart';
 
 import 'http.dart';
+import 'lesson_notifications.dart';
 import 'sessions.dart';
 
 /// The staff endpoints: a professor decides and records their lessons, an admin decides verifications.
@@ -16,12 +19,16 @@ import 'sessions.dart';
 /// 3. missing, or not the caller's to see → 404;
 /// 4. build the use case with the caller and run it, so the domain rules decide;
 /// 5. answer with the record, or with the rule's refusal as a problem.
+///
+/// After a success that a student should hear about (confirm, reject), the handler also starts the emails, without
+/// waiting for them. The use case has already committed by then.
 final class StaffHandlers {
-  StaffHandlers(this._lessons, this._verifications, this._clock);
+  StaffHandlers(this._lessons, this._verifications, this._clock, this._notifications);
 
   final LessonRepository _lessons;
   final VerificationRepository _verifications;
   final Clock _clock;
+  final LessonNotifications _notifications;
 
   /// `POST /lessons/{id}/confirmation` → the confirmed lesson and the requests rejected with it.
   Future<Response> confirm(Request request) async {
@@ -31,6 +38,9 @@ final class StaffHandlers {
       return problem(const NotFound());
     }
     final result = await ConfirmLesson(_lessons, _clock, caller)(lesson);
+    if (result is Success<Confirmation>) {
+      unawaited(_notifications.confirmed(result.value));
+    }
     return respond(result, (confirmation) => confirmation.toDto().toJson());
   }
 
@@ -42,6 +52,9 @@ final class StaffHandlers {
       return problem(const NotFound());
     }
     final result = await RejectLesson(_lessons, _clock, caller)(lesson);
+    if (result is Success<Lesson>) {
+      unawaited(_notifications.rejected(result.value));
+    }
     return respond(result, (lesson) => lesson.toDto().toJson());
   }
 

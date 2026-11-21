@@ -13,6 +13,11 @@ Future<void> main() async {
     SeedOutcome.notEmpty => 'Seed: skipped, the database already has users',
     SeedOutcome.noDemoPassword => 'Seed: skipped, DEMO_PASSWORD is not set',
   });
+  final resend = switch (config.resendApiKey) {
+    final key? => ResendMailer(key, from: config.mailFrom),
+    null => null,
+  };
+  stdout.writeln(resend == null ? 'Mail: log only (RESEND_API_KEY is not set)' : 'Mail: Resend → ${config.mailTo}');
   final server = RelicServer(() => IOAdapter.bind(InternetAddress(config.host), port: config.port));
   await server.mountAndStart(
     buildHandler(
@@ -26,6 +31,7 @@ Future<void> main() async {
         ttl: config.sessionTtl,
         secureCookie: config.secureCookie,
       ),
+      notifications: LessonNotifications(resend ?? LogMailer(stdout.writeln), inbox: config.mailTo ?? 'log'),
     ),
   );
   stdout.writeln('Server on http://${config.host}:${config.port}');
@@ -33,6 +39,7 @@ Future<void> main() async {
   // The server first, so requests still running can finish their queries. Then the connections.
   await server.close();
   await database.close();
+  resend?.close();
   stdout.writeln('Server stopped');
 }
 
