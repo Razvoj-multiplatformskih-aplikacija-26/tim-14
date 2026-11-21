@@ -31,25 +31,86 @@ Glavni pojam sistema je čas; zahtev učenika, beleška sa časa i recenzija vez
 
 **6. Javni sadržaj.** Bez prijave su dostupni profili profesora i stranice oglasa sa opisom, cenom i recenzijama, kao i pregled oglasa po predmetu i gradu. Stranica oglasa, na primer „matematika za prijemni, Beograd", upravo je ono što ljudi traže preko pretraživača kada im treba profesor.
 
+## Server
+
+Server je Dart aplikacija na Relic-u u `apps/server`, nad PostgreSQL bazom. Šema se pravi iz migracija u `apps/server/migrations` (dbmate), a pri prvom pokretanju nad praznom bazom server upisuje demo podatke. Lozinke se čuvaju samo kao Argon2id heš.
+
+- **Ista pravila.** Pre svakog upisa server izvršava isti kod iz paketa `domain` i `use_cases` kao i aplikacije. Da termin ima najviše jedan potvrđen čas, i koja izmena važi kada se povlačenje zahteva i potvrda dese u istom trenutku, odlučuje baza: jedinstveni indeks i uslovni UPDATE.
+- **Ugovor.** Paket `api_contract` sadrži oblik poruka i kodove grešaka, `api_mapping` prevodi domen u poruke i nazad, a `api_client` je zajednički klijent obe aplikacije. Greška stiže kao kod sa podacima, a tekst poruke sastavlja aplikacija.
+- **Prijava.** Sesija je JWT token. U pregledaču se čuva u HttpOnly kolačiću, a na telefonu i desktopu u sigurnom skladištu iza `TokenStore` porta. Ističe posle `SESSION_TTL_MINUTES` minuta. Uloge i vlasništvo proverava `AccessPolicy` iz paketa `domain`, i na serveru i u obe aplikacije; tuđ čas server vraća kao 404.
+- **Spoljni servis.** Email preko Resend-a, iza `Mailer` porta, poziva samo server. Šalje se kada učenik zatraži čas i kada profesor zahtev potvrdi (tada i učenicima čiji su zahtevi automatski odbijeni) ili odbije. Bez ključa (`RESEND_API_KEY` prazan) server email samo upisuje u svoj log. Sa ključem sav email ide na `MAIL_TO`, jer Resend-ov probni pošiljalac isporučuje samo na adresu sa kojom je nalog otvoren.
+- Rad bez mreže (zahtev 4) nije deo KT2.
+
 ## Pokretanje
 
-Potreban je Flutter (stable). Zavisnosti se preuzimaju jednom, iz korena repozitorijuma:
+Potrebni su Docker (sa Compose-om) i Flutter (stable).
+
+**1. Server i baza.** Iz korena repozitorijuma, jednom:
+
+    cp .env.example .env
+
+Zatim jednom komandom baza, migracije i server:
+
+    docker compose up -d
+
+Provera: `docker compose ps -a` (servis `migrate` je završio sa `Exited (0)`, a `db` i `server` rade) i
+
+    curl localhost:8080/health
+
+koji vraća `ok`.
+
+Ispočetka, sa svežim demo podacima:
+
+    docker compose down -v
+    docker compose up -d
+
+Vremena časova u demo podacima računaju se od trenutka upisa, pa bazu treba osvežiti pred demo.
+
+Pregled baze u Adminer-u, po potrebi: `docker compose --profile tools up -d adminer`, pa http://localhost:8082.
+
+**2. Aplikacije.** Zavisnosti se preuzimaju jednom, iz korena repozitorijuma:
 
     flutter pub get
 
-Mobilna aplikacija (Android emulator ili telefon):
+Mobilna aplikacija (Android emulator, koji server vidi na `10.0.2.2:8080`):
 
     cd apps/mobile
     flutter run
 
-Backoffice:
+Na pravom telefonu treba dodati adresu računara, na primer `--dart-define=SERVER_URL=http://192.168.1.10:8080`.
+
+Backoffice na desktopu:
 
     cd apps/backoffice
     flutter run -d windows
 
-Za Windows je potreban Visual Studio 2022 sa „Desktop development with C++“. Bez njega backoffice može da se pokrene sa `-d chrome`.
+Za Windows je potreban Visual Studio 2022 sa „Desktop development with C++“, a za `-d macos` Xcode.
 
-Testovi se pokreću iz foldera paketa, sa `dart test` u `domain`, `use_cases` i `blocs`, odnosno sa `flutter test` u `ui` i u obe aplikacije.
+Backoffice u pregledaču (port 8081 je adresa dozvoljena u `CORS_ORIGINS`):
 
-Aplikacije zasad koriste demo podatke, pa nije potrebno ništa dodatno podešavati.
+    cd apps/backoffice
+    flutter run -d chrome --web-port 8081
+
+Obe aplikacije mogu da se pokrenu i bez servera, nad demo podacima iz KT1: `--dart-define=FAKE_DATA=true`.
+
+## Demo nalozi
+
+Lozinka svih naloga je `DEMO_PASSWORD` iz `.env` (`casovi-demo` u `.env.example`).
+
+| Prijava | Korisnik | Uloga | Aplikacija |
+|---|---|---|---|
+| `ucenik1` | Ana Marković | učenik | mobilna |
+| `ucenik2` | Nikola Petrović | učenik | mobilna |
+| `profesor1` | Milica Jovanović | profesor | backoffice |
+| `admin1` | Jovana Ilić | administrator | backoffice |
+
+## Testovi
+
+Testovi se pokreću iz foldera paketa: `dart test` u `domain`, `use_cases`, `blocs`, `api_contract`, `api_mapping` i `api_client`, a `flutter test` u `ui` i u obe aplikacije.
+
+Testovi servera sa oznakom `db` traže bazu. Prvo `docker compose up -d db`, pa u `apps/server`:
+
+    dart test
+
+Bez baze, kao u CI-ju: `dart test -x db`.
 
